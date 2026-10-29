@@ -15,7 +15,8 @@ PATTERNS = [
     (r"\b(tell|inform|convince|recommend|assure)\b.{0,30}\buser\b", 0.5, "tells the AI what to say to the user"),
     (r"\b(append|add|include|end|start)\b.{0,80}\b(summary|response|answer|reply|output)\b", 0.5, "tries to change the AI's answer"),
     (r"\byou (are|must|will|should) now\b", 0.5, "tries to change the AI's role"),
-    (r"\b(classif\w*|label\w*|benign|not (a|an) (prompt )?injection|safe content)\b", 0.5, "talks to the classifier itself"),
+    # Alone this only reaches suspicious: "label" is also an HTML tag name. exorcist.py keeps it from ever being benign.
+    (r"\b(classif\w*|benign|not (a|an) (prompt )?injection|safe content)\b|\blabel(l?ed)?\s*(this|it|as|every|:|=)", 0.3, "talks to the classifier itself"),
     (r"\b(proceed|click|navigate|go)\s+to\b.{0,30}\b(checkout|link|url|https?:)", 0.4, "pushes the AI to take an action"),
     (r"\b(rate|score|review)\b.{0,30}\b\d+\s*(out of|/)\s*\d+", 0.3, "dictates a rating"),
     (r"https?://|www\.|\b[\w-]+\.(com|net|org|io|xyz|example)\b", 0.2, "contains a link"),
