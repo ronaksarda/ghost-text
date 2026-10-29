@@ -39,6 +39,8 @@
     for (let e = el; e; e = up(e)) {
       const s = cs(e);
       if (s.display === 'none') return ['H1', e];
+      const p = e.parentElement;  // a closed <details> hides everything but its summary without any CSS
+      if (p && p.localName === 'details' && !p.open && e.localName !== 'summary') return ['H1', e];
       opacity *= parseFloat(s.opacity);
       if (opacity < 0.05) return ['H2', e];
       if (s.clip === 'rect(0px, 0px, 0px, 0px)' || /inset\(\s*(50|100)%/.test(s.clipPath)) return ['H6', e];
@@ -81,10 +83,26 @@
   const roots = [document];
   for (let i = 0; i < roots.length; i++) for (const el of roots[i].querySelectorAll('*')) if (el.shadowRoot) roots.push(el.shadowRoot);
 
+  // Closed shadow roots can't be read from page JS. A custom element with no children that still takes up space is one.
+  const unscannable = [];
+  for (const root of roots) for (const el of root.querySelectorAll('*')) {
+    const r = el.localName.includes('-') && !el.shadowRoot && !el.childNodes.length && el.getBoundingClientRect();
+    if (r && r.width * r.height > 0) unscannable.push({ kind: 'closed_shadow_root', selector: selector(el) });
+  }
+
+  // Hidden pieces under the same hiding ancestor (or in the same block) are one ghost, so a split injection is judged whole.
   const ghosts = [], grouped = new Map();
   const add = (key, g) => {
     const prev = key && grouped.get(key);
-    if (prev) { prev.text += ' ' + g.text; return ghosts.indexOf(prev); }
+    if (prev) {
+      prev.text += ' ' + g.text;
+      for (const t of g.technique) if (!prev.technique.includes(t)) prev.technique.push(t);
+      if (prev.box && g.box) {
+        const [a, b] = [prev.box, g.box], x = Math.min(a.x, b.x), y = Math.min(a.y, b.y);
+        prev.box = { x, y, w: Math.max(a.x + a.w, b.x + b.w) - x, h: Math.max(a.y + a.h, b.y + b.h) - y };
+      }
+      return ghosts.indexOf(prev);
+    }
     ghosts.push(g);
     if (key) grouped.set(key, g);
     return ghosts.length - 1;
@@ -123,7 +141,8 @@
       }
       const [found, b] = hiddenText(node, el);
       if (invisible) found.push('H9');
-      read(text, el, found.length ? add(null, { text, technique: found, views: ['dom_text'], selector: selector(el), box: b }) : -1);
+      // H9 ghosts stay per node: each keeps its own visible half.
+      read(text, el, found.length ? add(invisible ? null : blockOf(el), { text, technique: found, views: ['dom_text'], selector: selector(el), box: b }) : -1);
     }
 
     for (const el of root.querySelectorAll('noscript')) {
@@ -151,5 +170,5 @@
     if (text) add(null, { text, technique: ['H11'], attribute: 'content', views: ['raw_html'], selector: selector(el), box: null });
   }
 
-  return { ghosts, reading, stats: { elements: document.querySelectorAll('*').length, text_nodes: textNodes, shadow_roots: roots.length - 1 } };
+  return { ghosts, reading, unscannable, stats: { elements: document.querySelectorAll('*').length, text_nodes: textNodes, shadow_roots: roots.length - 1 } };
 }

@@ -1,4 +1,6 @@
 """Rule pre-score (PRD 7.3 step 1). Cheap and explainable; the fine-tuned judge refines it."""
+import base64
+import binascii
 import re
 
 # (pattern, weight, reason). Weights combine as independent evidence: 1 - prod(1 - w).
@@ -22,8 +24,29 @@ COMPILED = [(re.compile(p, re.I | re.S), w, r) for p, w, r in PATTERNS]
 INJECTION, SUSPICIOUS = 0.5, 0.25
 
 
+BASE64 = re.compile(r"[A-Za-z0-9+/]{40,}={0,2}")
+
+
+def decode_base64(text: str) -> str:
+    """Readable text hidden in base64 runs over 40 chars (PRD 9.4). Binary blobs (images, hashes) decode to nothing."""
+    out = []
+    for run in BASE64.findall(text):
+        try:
+            decoded = base64.b64decode(run + "=" * (-len(run) % 4)).decode("utf-8")
+        except (binascii.Error, UnicodeDecodeError):
+            continue
+        if " " in decoded and "".join(decoded.split()).isprintable():
+            out.append(decoded)
+    return " ".join(out)
+
+
 def score(text: str) -> tuple[float, list[str]]:
     miss, reasons = 1.0, []
+    decoded = decode_base64(text)
+    if decoded:
+        text += " " + decoded  # the encoded payload is scored as if it were plain text
+        miss *= 0.7
+        reasons.append("hides base64-encoded text")
     for pattern, weight, reason in COMPILED:
         if pattern.search(text):
             miss *= 1 - weight
