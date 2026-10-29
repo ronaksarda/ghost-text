@@ -150,7 +150,7 @@ function render(d) {
 }
 
 function item(g) {
-  const li = el('li', 'ghost');
+  const li = el('li', 'ghost-item');
   li.dataset.label = g.label; li.dataset.id = g.id; li.tabIndex = 0;
   li.appendChild(el('p', 'ghost-text', g.text));
   const meta = el('div', 'ghost-meta');
@@ -167,8 +167,8 @@ function item(g) {
 }
 
 function select(id, scrollTo) {
-  document.querySelectorAll('.ghost.on, .box.on').forEach((n) => n.classList.remove('on'));
-  const row = document.querySelector(`.ghost[data-id="${id}"]`);
+  document.querySelectorAll('.ghost-item.on, .box.on').forEach((n) => n.classList.remove('on'));
+  const row = document.querySelector(`.ghost-item[data-id="${id}"]`);
   const box = document.querySelector(`.box[data-id="${id}"]`);
   if (row) { row.classList.add('on'); if (row.closest('details')) row.closest('details').open = true; }
   if (box) box.classList.add('on');
@@ -192,4 +192,28 @@ $('copy-curl').addEventListener('click', () => {
   copy(`curl -X POST ${location.origin}/scan -H "Content-Type: application/json" -d '${payload.replace(/'/g, "'\\''")}'`, 'curl command');
 });
 
-$('api-example').textContent = $('api-example').textContent.replace('https://ghosttext.example', location.origin);
+// Pixel ghost mascot, drawn once per <svg data-ghost>. '#' is body, 'o' is eye.
+const GHOST = ['....####....', '..########..', '.##########.', '.##oo##oo##.', '.##oo##oo##.', '############',
+  '############', '############', '############', '############', '##.###.###.#', '#...#...#...'];
+const NS = 'http://www.w3.org/2000/svg';
+for (const svg of document.querySelectorAll('[data-ghost]')) {
+  for (const [cls, ch] of [['body', '#'], ['eye', 'o']]) {
+    const p = document.createElementNS(NS, 'path');
+    p.setAttribute('class', cls);
+    p.setAttribute('d', GHOST.flatMap((row, y) => [...row].map((c, x) => (c === ch || (cls === 'body' && c === 'o') ? `M${x} ${y}h1v1h-1z` : ''))).join(''));
+    svg.appendChild(p);
+  }
+}
+
+// The hero ghost's eyes follow the visitor's pointer.
+const heroEyes = document.querySelector('.hero .ghost .eye');
+if (heroEyes && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  addEventListener('pointermove', (e) => {
+    const r = heroEyes.ownerSVGElement.getBoundingClientRect();
+    const dx = Math.sign(Math.round((e.clientX - (r.left + r.width / 2)) / 120));
+    const dy = Math.sign(Math.round((e.clientY - (r.top + r.height / 2)) / 160));
+    heroEyes.setAttribute('transform', `translate(${Math.max(-1, Math.min(1, dx))} ${Math.max(0, Math.min(1, dy))})`);
+  });
+}
+
+$('api-example').textContent =$('api-example').textContent.replace('https://ghosttext.example', location.origin);
