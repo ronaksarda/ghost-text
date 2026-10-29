@@ -3,6 +3,7 @@ import base64
 import time
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import TimeoutError as PlaywrightTimeout
@@ -18,6 +19,11 @@ MAX_GHOSTS = 500
 
 class ScanError(Exception):
     pass
+
+
+def _origin(url: str) -> tuple[str, str]:
+    parts = urlsplit(url)
+    return parts.scheme, parts.netloc
 
 
 def _clean(ghost: dict) -> dict | None:
@@ -78,7 +84,12 @@ def scan(url: str | None = None, html: str | None = None, *, screenshot: bool = 
 
             ghosts, reading, unscannable = [], [], []
             stats = {"elements": 0, "text_nodes": 0, "shadow_roots": 0}
+            origin = _origin(page.main_frame.url)
             for frame in page.frames:
+                # PRD H16: same-origin frames are scanned, cross-origin ones (ads, embeds) are reported, not read.
+                if frame is not page.main_frame and not frame.url.startswith("about:") and _origin(frame.url) != origin:
+                    unscannable.append({"kind": "cross_origin_iframe", "src": frame.url})
+                    continue
                 try:
                     result = frame.evaluate(EXTRACT_JS)
                 except PlaywrightError:
@@ -94,6 +105,7 @@ def scan(url: str | None = None, html: str | None = None, *, screenshot: bool = 
                 for piece in result["reading"]:
                     piece["ghost"] = ids[piece["ghost"]] if piece["ghost"] >= 0 else None
                     reading.append(piece)
+                unscannable += result["unscannable"]
                 for k in stats:
                     stats[k] += result["stats"][k]
 

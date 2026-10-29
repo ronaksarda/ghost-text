@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="How to set up the Lantern CLI in five minutes.">
+<title>Getting started · Lantern Docs</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #fff; color: #1d2433; margin: 0; line-height: 1.55; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 1rem; }
+  .top { display: flex; gap: 1rem; align-items: center; border-bottom: 1px solid #e3e6ec; padding: 0.75rem 1rem; }
+  .nav-mobile { display: none; }
+  @media (max-width: 600px) { .nav-desktop { display: none; } .nav-mobile { display: block; } }
+  .cookie { display: none; }
+  .modal { display: none; }
+  .panel[hidden] { display: none; }
+  details { border: 1px solid #e3e6ec; border-radius: 6px; padding: 0.5rem 0.75rem; margin: 0.5rem 0; }
+  pre { background: #f4f6f9; padding: 0.75rem; border-radius: 6px; overflow-x: auto; }
+  .tabs button { margin-right: 0.5rem; }
+</style>
+</head>
+<body>
+  <a class="sr-only" href="#content">Skip to main content</a>
+  <div class="cookie" role="dialog" aria-label="Cookie preferences">
+    <p>We use cookies to remember your settings.</p>
+    <button>Accept</button> <button>Reject</button>
+  </div>
+  <header class="top">
+    <strong>Lantern Docs</strong>
+    <nav class="nav-desktop" aria-label="Main"><a href="/docs">Docs</a> <a href="/blog">Blog</a> <a href="/changelog">Changelog</a></nav>
+    <nav class="nav-mobile" aria-label="Mobile"><a href="/docs">Docs</a> <a href="/blog">Blog</a></nav>
+    <button aria-label="Search" title="Search the docs">🔍</button>
+    <button aria-label="Switch to dark theme">🌙</button>
+  </header>
+  <main id="content" class="wrap">
+    <h1>Getting started</h1>
+    <p>Lantern is a small command-line tool for checking links in static sites. Install it, point it at a folder, read the report.</p>
+    <span lang="es" hidden>Empezar</span><span lang="de" hidden>Erste Schritte</span>
+
+    <h2>Install</h2>
+    <div class="tabs" role="tablist">
+      <button role="tab" aria-selected="true">macOS</button><button role="tab">Linux</button><button role="tab">Windows</button>
+    </div>
+    <div class="panel" role="tabpanel"><pre>brew install lantern</pre></div>
+    <div class="panel" role="tabpanel" hidden><pre>curl -fsSL get.lantern.sh | sh</pre></div>
+    <div class="panel" role="tabpanel" hidden><pre>winget install lantern</pre></div>
+
+    <h2>Run it</h2>
+    <pre>lantern check ./public</pre>
+    <p>The report lists every broken link with the file and line it came from.</p>
+    <img src="data:," alt="Terminal output showing two broken links in about.html" width="600" height="200">
+
+    <h2>FAQ</h2>
+    <details><summary>Does it follow external links?</summary><p>Only with the --external flag. It waits one second between requests.</p></details>
+    <details><summary>Can I ignore some paths?</summary><p>Yes. Put one glob per line in a .lanternignore file.</p></details>
+    <details><summary>Does it work offline?</summary><p>Internal links are checked offline. External ones need a network.</p></details>
+
+    <h2>Credits</h2>
+    <p>Built by a small team 👩‍💻👨‍💻 across three cities. Translated by volunteers: <span dir="rtl" lang="ar">‏شكرا</span> and <span dir="rtl" lang="he">‏תודה</span>.</p>
+
+    <form action="/feedback" method="post">
+      <input type="hidden" name="csrf" value="a8f3c1e9d2b7">
+      <input type="hidden" name="page" value="getting-started">
+      <label for="fb">Was this page helpful?</label> <input id="fb" name="fb"> <button>Send</button>
+    </form>
+    <img src="data:," alt="" width="1" height="1" data-analytics="pageview" data-track-id="docs-start">
+    <template id="row"><tr><td>File</td><td>Line</td><td>Link</td></tr></template>
+    <noscript>Search needs JavaScript.</noscript>
+  </main>
+  <div class="modal" role="dialog" aria-label="Newsletter">
+    <p>Get release notes once a month.</p>
+    <button aria-label="Close dialog">×</button>
+  </div>
+  <footer class="wrap"><p>MIT licensed. <a href="/privacy">Privacy</a></p></footer>
+</body>
+</html>
