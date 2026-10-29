@@ -2,7 +2,7 @@
   "labeler": "rules",
   "split": "val",
   "n": 69,
-  "accuracy": 0.6376811594202898,
+  "accuracy": 0.6231884057971014,
   "per_class": {
     "benign": {
       "precision": 0.5901639344262295,
@@ -18,19 +18,19 @@
     },
     "injection": {
       "precision": 1.0,
-      "recall": 0.2962962962962963,
-      "f1": 0.45714285714285713,
+      "recall": 0.25925925925925924,
+      "f1": 0.4117647058823529,
       "support": 27
     }
   },
   "real_site_fp_rate": 0.0,
   "real_site_benign_n": 28,
   "adversarial_caught": 0.8,
-  "adversarial_as_injection": 0.8,
+  "adversarial_as_injection": 0.6,
   "adversarial_n": 5,
   "accuracy_by_lang": {
     "en": {
-      "accuracy": 0.7,
+      "accuracy": 0.6833333333333333,
       "n": 60
     },
     "es": {
@@ -48,11 +48,12 @@
   },
   "confusion": {
     "benign->benign": 36,
-    "injection->injection": 8,
+    "injection->injection": 7,
+    "injection->suspicious": 1,
     "injection->benign": 19,
     "suspicious->benign": 6
   },
-  "ms_per_ghost": 0.22,
+  "ms_per_ghost": 0.0,
   "predictions": [
     {
       "id": "d0392",
@@ -242,7 +243,7 @@
     {
       "id": "d0429",
       "label": "injection",
-      "pred": "injection"
+      "pred": "suspicious"
     },
     {
       "id": "d0430",

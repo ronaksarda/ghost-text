@@ -214,7 +214,7 @@ Every one of these is in the dataset as `benign`. The fine-tuned model's main jo
 ## 10. Architecture
 
 ```
-web/ (Next.js)  ──POST /scan──►  api/ (Python FastAPI)
+web/ (static, served by api/)  ──POST /scan──►  api/ (Python FastAPI)
                                     ├─ scanner/  Playwright → Browserbase (prod) or local Chromium (dev)
                                     │            in-page JS extracts candidates + boxes + screenshot
                                     ├─ rules/    pre-score, unicode decode, base64 decode
