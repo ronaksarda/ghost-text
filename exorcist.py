@@ -10,6 +10,18 @@ def rules_labeler(ghost: dict) -> tuple[str, str]:
     return score.label(ghost["text"])
 
 
+def contexts(reading: list[dict], width: int = 100) -> dict[str, str]:
+    """Visible text just before and after each ghost, for the judge (PRD 7.3). Attribute and comment ghosts get none."""
+    out, before = {}, ""
+    for i, piece in enumerate(reading):
+        if not piece["ghost"]:
+            before = (before + " " + piece["text"])[-width:]
+        elif piece["ghost"] not in out:
+            after = " ".join(p["text"] for p in reading[i + 1:i + 6] if not p["ghost"])[:width]
+            out[piece["ghost"]] = f"{before.strip()} … {after.strip()}".strip(" …")
+    return out
+
+
 def exorcise(scan_result: dict, labeler: Labeler = rules_labeler) -> dict:
     ghosts = scan_result["ghosts"]
     for g in ghosts:

@@ -1,0 +1,405 @@
+{
+  "labeler": "rules",
+  "split": "test",
+  "n": 69,
+  "accuracy": 0.6521739130434783,
+  "per_class": {
+    "benign": {
+      "precision": 0.6206896551724138,
+      "recall": 0.972972972972973,
+      "f1": 0.7578947368421053,
+      "support": 37
+    },
+    "suspicious": {
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
+      "support": 6
+    },
+    "injection": {
+      "precision": 0.9,
+      "recall": 0.34615384615384615,
+      "f1": 0.5,
+      "support": 26
+    }
+  },
+  "real_site_fp_rate": 0.0,
+  "real_site_benign_n": 28,
+  "adversarial_caught": 1.0,
+  "adversarial_as_injection": 1.0,
+  "adversarial_n": 4,
+  "accuracy_by_lang": {
+    "en": {
+      "accuracy": 0.6935483870967742,
+      "n": 62
+    },
+    "es": {
+      "accuracy": 0.0,
+      "n": 1
+    },
+    "hi": {
+      "accuracy": 0.25,
+      "n": 4
+    },
+    "zh": {
+      "accuracy": 0.5,
+      "n": 2
+    }
+  },
+  "confusion": {
+    "benign->benign": 36,
+    "benign->injection": 1,
+    "injection->benign": 16,
+    "injection->suspicious": 1,
+    "injection->injection": 9,
+    "suspicious->benign": 6
+  },
+  "ms_per_ghost": 0.0,
+  "predictions": [
+    {
+      "id": "d0000",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0001",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0002",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0003",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0004",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0005",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0006",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0007",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0008",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0009",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0010",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0011",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0012",
+      "label": "benign",
+      "pred": "injection"
+    },
+    {
+      "id": "d0013",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0014",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0015",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0016",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0017",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0018",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0019",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0020",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0021",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0022",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0023",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0024",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0025",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0026",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0027",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0028",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0029",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0030",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0031",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0032",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0033",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0034",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0035",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0036",
+      "label": "benign",
+      "pred": "benign"
+    },
+    {
+      "id": "d0037",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0038",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0039",
+      "label": "injection",
+      "pred": "suspicious"
+    },
+    {
+      "id": "d0040",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0041",
+      "label": "injection",
+      "pred": "injection"
+    },
+    {
+      "id": "d0042",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0043",
+      "label": "injection",
+      "pred": "injection"
+    },
+    {
+      "id": "d0044",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0045",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0046",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0047",
+      "label": "injection",
+      "pred": "injection"
+    },
+    {
+      "id": "d0048",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0049",
+      "label": "injection",
+      "pred": "injection"
+    },
+    {
+      "id": "d0050",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0051",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0052",
+      "label": "injection",
+      "pred": "injection"
+    },
+    {
+      "id": "d0053",
+      "label": "injection",
+      "pred": "injection"
+    },
+    {
+      "id": "d0054",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0055",
+      "label": "injection",
+      "pred": "injection"
+    },
+    {
+      "id": "d0056",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0057",
+      "label": "injection",
+      "pred": "injection"
+    },
+    {
+      "id": "d0058",
+      "label": "injection",
+      "pred": "injection"
+    },
+    {
+      "id": "d0059",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0060",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0061",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0062",
+      "label": "injection",
+      "pred": "benign"
+    },
+    {
+      "id": "d0063",
+      "label": "suspicious",
+      "pred": "benign"
+    },
+    {
+      "id": "d0064",
+      "label": "suspicious",
+      "pred": "benign"
+    },
+    {
+      "id": "d0065",
+      "label": "suspicious",
+      "pred": "benign"
+    },
+    {
+      "id": "d0066",
+      "label": "suspicious",
+      "pred": "benign"
+    },
+    {
+      "id": "d0067",
+      "label": "suspicious",
+      "pred": "benign"
+    },
+    {
+      "id": "d0068",
+      "label": "suspicious",
+      "pred": "benign"
+    }
+  ]
+}
