@@ -20,18 +20,57 @@ const STEPS = ['Opening the page in a real browser', 'Looking for what you can\'
 let current = null;
 const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-// Tabs: web address or pasted HTML.
-for (const [tab, other] of [['tab-url', 'tab-html'], ['tab-html', 'tab-url']]) {
-  $(tab).addEventListener('click', () => {
-    $(tab).setAttribute('aria-selected', 'true'); $(other).setAttribute('aria-selected', 'false');
-    $(`panel-${tab.slice(4)}`).hidden = false; $(`panel-${other.slice(4)}`).hidden = true;
-    $(tab === 'tab-url' ? 'url' : 'html').focus();
-  });
+// Tabs: web address, pasted HTML, or a web search.
+const TABS = { url: 'url', html: 'html', search: 'q' };
+function showTab(name) {
+  for (const t of Object.keys(TABS)) {
+    $(`tab-${t}`).setAttribute('aria-selected', String(t === name));
+    $(`panel-${t}`).hidden = t !== name;
+  }
+  $(TABS[name]).focus();
 }
+for (const t of Object.keys(TABS)) $(`tab-${t}`).addEventListener('click', () => showTab(t));
+
+// Sign-in (Auth0). Scanning is open to everyone; search and AI summaries cost money per call, so they need an account.
+let auth0Client = null, config = {};
+async function token() {
+  if (!auth0Client) return null;
+  try { return await auth0Client.getTokenSilently(); } catch { return null; }
+}
+async function authed(path, body) {
+  const t = await token();
+  return fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json', ...(t ? { Authorization: `Bearer ${t}` } : {}) }, body: JSON.stringify(body) });
+}
+async function needSignIn() {
+  if (auth0Client && !(await auth0Client.isAuthenticated())) { await auth0Client.loginWithRedirect(); return true; }
+  return false;
+}
+(async () => {
+  config = await fetch('/config').then((r) => r.json()).catch(() => ({}));
+  if (!config.auth0 || !window.auth0) return;
+  auth0Client = await window.auth0.createAuth0Client({
+    domain: config.auth0.domain, clientId: config.auth0.clientId, cacheLocation: 'localstorage',
+    authorizationParams: { audience: config.auth0.audience, redirect_uri: location.origin },
+  });
+  if (/[?&]code=/.test(location.search) && /[?&]state=/.test(location.search)) {
+    try { await auth0Client.handleRedirectCallback(); } catch {}
+    history.replaceState({}, '', location.pathname);
+  }
+  const signedIn = await auth0Client.isAuthenticated();
+  $('sign').hidden = false;
+  $('sign').textContent = signedIn ? 'Sign out' : 'Sign in';
+  $('sign').addEventListener('click', () => (signedIn
+    ? auth0Client.logout({ logoutParams: { returnTo: location.origin } })
+    : auth0Client.loginWithRedirect()));
+})();
 
 $('scan').addEventListener('submit', (e) => {
   e.preventDefault();
-  if (!$('panel-url').hidden) {
+  if (!$('panel-search').hidden) {
+    const q = $('q').value.trim();
+    if (!q) return showError('Type what you would search for.');
+    search(q);
+  } else if (!$('panel-url').hidden) {
     let url = $('url').value.trim();
     if (!url) return showError('Type a web address to scan.');
     if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
@@ -51,10 +90,10 @@ async function run(body, demo) {
   const buttons = document.querySelectorAll('.go, [data-demo]');
   buttons.forEach((b) => (b.disabled = true));
   $('result').hidden = true;
+  $('search').hidden = true;
   const stop = progress();
   try {
-    const r = demo ? await fetch(`/demo-results/${demo}.json`)
-      : await fetch('/scan', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const r = demo ? await fetch(`/demo-results/${demo}.json`) : await authed('/scan', body);
     const data = await r.json().catch(() => ({}));
     stop();
     if (!r.ok) return showError(data.detail || `The scan failed (HTTP ${r.status}). Try again, or use Paste HTML.`);
@@ -69,16 +108,16 @@ async function run(body, demo) {
 }
 
 // The scan is one request, so steps advance on typical timings; the list says what is happening, in order.
-function progress() {
+function progress(steps = STEPS) {
   const box = $('status');
   box.hidden = false; box.replaceChildren();
   const list = el('ol');
-  const items = STEPS.map((s) => list.appendChild(el('li', null, s)));
+  const items = steps.map((s) => list.appendChild(el('li', null, s)));
   box.appendChild(list);
   let i = 0;
   const mark = () => items.forEach((li, j) => { li.className = j < i ? 'done' : ''; j === i ? li.setAttribute('aria-current', 'step') : li.removeAttribute('aria-current'); });
   mark();
-  const t = setInterval(() => { if (i < STEPS.length - 1) { i++; mark(); } }, 3500);
+  const t = setInterval(() => { if (i < steps.length - 1) { i++; mark(); } }, 3500);
   return () => { clearInterval(t); box.hidden = true; };
 }
 
@@ -145,6 +184,9 @@ function render(d) {
   }
 
   $('result').hidden = false;
+  $('ask').hidden = !config.summaries;
+  $('ask-pair').hidden = true;
+  $('ask-cost').textContent = '';
   if (d.verdict === 'haunted' && !still) {
     $('flash').classList.remove('on'); void $('flash').offsetWidth; $('flash').classList.add('on');
     twitch($('verdict-word'));
@@ -195,6 +237,74 @@ $('copy-curl').addEventListener('click', () => {
   if (!current) return;
   const payload = current.body.url ? JSON.stringify({ url: current.body.url }) : '{"html": "<paste your HTML here>"}';
   copy(`curl -X POST ${location.origin}/scan -H "Content-Type: application/json" -d '${payload.replace(/'/g, "'\\''")}'`, 'curl command');
+});
+
+const SEARCH_STEPS = ['Searching the web', 'Opening the top five results', 'Looking for what you can\'t see'];
+
+async function search(q) {
+  if (await needSignIn()) return;
+  const buttons = document.querySelectorAll('.go, [data-demo]');
+  buttons.forEach((b) => (b.disabled = true));
+  $('result').hidden = true; $('search').hidden = true;
+  const stop = progress(SEARCH_STEPS);
+  try {
+    const r = await authed('/search', { q });
+    const data = await r.json().catch(() => ({}));
+    stop();
+    if (!r.ok) return showError(data.detail || `The search failed (HTTP ${r.status}). Try again.`);
+    renderSearch(data);
+  } catch {
+    stop();
+    showError('Could not reach Ghost Text. Check your connection and try again.');
+  } finally {
+    buttons.forEach((b) => (b.disabled = false));
+  }
+}
+
+function renderSearch(d) {
+  const bad = d.results.filter((x) => x.verdict === 'haunted' || x.verdict === 'uneasy').length;
+  $('search-title').textContent = bad
+    ? `${bad} of the top ${d.results.length} results for "${d.q}" hide something from you`
+    : `Nothing hiding in the top ${d.results.length} results for "${d.q}"`;
+  $('search-list').replaceChildren(...d.results.map((x) => {
+    const li = el('li');
+    li.appendChild(el('span', `chip ${x.verdict}`, x.verdict === 'unscanned' ? 'Not scanned' : VERDICT[x.verdict][0]));
+    const a = el('a', null, x.title || x.link);
+    a.href = x.link; a.rel = 'noopener noreferrer nofollow'; a.target = '_blank';
+    li.appendChild(a);
+    try { li.appendChild(el('span', 'host', new URL(x.link).hostname)); } catch {}
+    if (x.first) li.appendChild(el('p', 'found', x.first));
+    if (x.error) li.appendChild(el('span', 'host', x.error));
+    const actions = el('div', 'row-actions');
+    if (x.hostile) actions.appendChild(el('span', 'host', `${x.hostile} hidden piece${x.hostile === 1 ? '' : 's'} flagged`));
+    const open = el('button', 'btn btn-quiet', 'Open full scan');
+    open.type = 'button';
+    open.addEventListener('click', () => { showTab('url'); $('url').value = x.link; run({ url: x.link }); });
+    actions.appendChild(open);
+    li.appendChild(actions);
+    return li;
+  }));
+  $('search').hidden = false;
+  $('search').scrollIntoView({ behavior: still ? 'auto' : 'smooth' });
+}
+
+$('ask-go').addEventListener('click', async () => {
+  if (!current || await needSignIn()) return;
+  const b = $('ask-go');
+  b.disabled = true; b.textContent = 'Asking the AI…';
+  try {
+    const r = await authed('/summarize', { raw: current.data.raw_text || '', clean: current.data.clean_text || '' });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) { $('ask-cost').textContent = d.detail || 'The AI did not answer. Try again.'; return; }
+    $('ask-raw').textContent = d.raw;
+    $('ask-clean').textContent = d.clean;
+    $('ask-pair').hidden = false;
+    $('ask-cost').textContent = `Model: ${d.model}. These two answers cost $${d.cost_usd.toFixed(5)}.`;
+  } catch {
+    $('ask-cost').textContent = 'Could not reach Ghost Text. Try again.';
+  } finally {
+    b.disabled = false; b.textContent = 'Ask the AI to summarise it';
+  }
 });
 
 // Pixel ghost mascot, drawn once per <svg data-ghost>. '#' is body, 'o' is eye.

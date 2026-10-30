@@ -12,11 +12,17 @@ A page can carry text in white on white, a one-pixel font, pushed off screen, or
 
 **The website (check one page).** Paste a link or raw HTML and get a verdict (Haunted, Uneasy or Clean), each hidden sentence with how it was hidden, a screenshot with the hidden text outlined, and a cleaned copy of the page text you can hand to an AI.
 
+**Search check (signed in).** Agents search, then read the top results. Type a search: Ghost Text runs it through SerpApi and scans the top five results before your agent opens them.
+
+**See it fooled (signed in).** After a scan, Ultramarine summarises the page twice, as a normal agent reads it and after Ghost Text cleans it, side by side, with the real cost of the two calls.
+
 **The API (for developers building agents).** Send a page through Ghost Text before your model sees it, and use `clean_text`:
 
 ```bash
 curl -X POST https://<site>/scan -H "Content-Type: application/json" -d '{"url": "https://example.com/product"}'
 ```
+
+Agents that call the API at scale use an Auth0 access token (`Authorization: Bearer ...`, client-credentials grant) and get their own higher rate limit. Anonymous callers are limited to 10 scans a minute.
 
 Or run it on your own machine so pages never leave it:
 
@@ -69,7 +75,7 @@ Deploy on one DigitalOcean droplet: paste [deploy/cloud-init.sh](deploy/cloud-in
 
 ## Built with
 
-Playwright, FastAPI, llama.cpp, Qwen3-8B (Apache-2.0), Browserbase, DigitalOcean. Built for the DEV Hacktoberfest 2026 Open-Source AI Challenge, Week 4: Ghost in the Machine. Commits made after Oct 31, 2026, 11:59 PM PDT will be listed here.
+Playwright, FastAPI, llama.cpp, Qwen3-8B (Apache-2.0), Browserbase, DigitalOcean, SerpApi, Ultramarine (Paper Instruments), Auth0. Built for the DEV Hacktoberfest 2026 Open-Source AI Challenge, Week 4: Ghost in the Machine. Commits made after Oct 31, 2026, 11:59 PM PDT will be listed here.
 
 ## License
 

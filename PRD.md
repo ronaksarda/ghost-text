@@ -73,6 +73,7 @@ Three or four built-in pages we host ourselves (clean blog, shop with hidden rev
 - Web UI: URL input, HTML paste, demo gallery, screenshot overlay, ghost list
 - `POST /scan` API
 - Browser extension (Ghost Text Shield, Chromium MV3): removes hostile ghosts from every page the user opens before an in-browser AI assistant reads it. Added Oct 30 by the owner: normal users need protection without pasting links. Covers assistants that read the open tab; not assistants that fetch pages server-side.
+- Search check (SerpApi: scan the top 5 results for a query), AI summary comparison (Ultramarine summarises raw vs cleaned page, cost shown), Auth0 sign-in gating those paid features and giving agents tokens with their own rate limit. Added Oct 30 by the owner.
 - Deployed on DigitalOcean; Browserbase as the production browser
 - Open repo with dataset, eval script, and model card
 

@@ -140,6 +140,27 @@ input:focus, textarea:focus { outline: none; border-color: var(--blood); }
 .demo span { color: var(--ash); font-weight: 400; font-size: 0.88rem; }
 .demo:hover strong { color: var(--blood); }
 
+.hint { color: var(--ash); font-size: 0.88rem; margin: var(--s1) 0 0; }
+.search { padding: var(--s3) 0 var(--s4); }
+.search-list { list-style: none; padding: 0; margin: var(--s2) 0 0; display: grid; gap: var(--s1); }
+.search-list li { background: var(--crypt); border: 1px solid var(--rot); border-radius: 6px; padding: var(--s2); display: grid; gap: 0.35rem; }
+.search-list a { font-weight: 700; overflow-wrap: anywhere; }
+.search-list .host { color: var(--ash); font-size: 0.85rem; }
+.search-list .found { font: 400 1rem/1.5 var(--evidence); color: #ffd9dd; margin: 0; overflow-wrap: anywhere; }
+.search-list .row-actions { display: flex; gap: var(--s1); align-items: center; flex-wrap: wrap; }
+.chip { font: 400 0.6rem/1 var(--pixel); border-radius: 3px; padding: 0.35rem 0.45rem; border: 1px solid currentColor; justify-self: start; }
+.chip.haunted { color: var(--haunted); background: var(--haunted-bg); }
+.chip.uneasy { color: var(--uneasy); background: var(--uneasy-bg); }
+.chip.clean { color: var(--clean); background: var(--clean-bg); }
+.chip.unscanned { color: var(--ash); }
+.ask { margin-top: var(--s5); border-top: 1px solid var(--rot); padding-top: var(--s3); }
+.ask > p { color: var(--ash); max-width: 64ch; margin: var(--s1) 0 var(--s2); }
+.ask-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); margin-top: var(--s2); }
+.ask-pair > div { background: var(--crypt); border: 1px solid var(--rot); border-radius: 6px; padding: var(--s2); }
+.ask-pair > div:first-child { border-color: var(--blood-deep); }
+.ask-pair h3 { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.4rem; }
+.ask-pair p { margin: 0; white-space: pre-wrap; }
+@media (max-width: 880px) { .ask-pair { grid-template-columns: 1fr; } }
 .status { padding: var(--s3) 0; text-align: center; }
 .status ol { list-style: none; padding: 0; margin: 0; display: inline-flex; flex-direction: column; gap: 0.35rem; text-align: left; font: 400 1rem var(--evidence); }
 .status li { color: #6f655c; }
