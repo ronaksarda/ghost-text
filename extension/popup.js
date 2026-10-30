@@ -2,7 +2,9 @@
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 (async () => {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  // popup.html?tab=<id> shows that tab's report in a normal page (used to record the demo video).
+  const forced = Number(new URLSearchParams(location.search).get('tab'));
+  const [tab] = forced ? [{ id: forced }] : await chrome.tabs.query({ active: true, currentWindow: true });
   const settings = await chrome.storage.local.get({ enabled: true, judge: true });
   for (const k of ['enabled', 'judge']) {
     const box = document.getElementById(k);
