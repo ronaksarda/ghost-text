@@ -1,9 +1,11 @@
 """Label every ghost, decide the verdict in code, and rebuild the page text without the hostile ones."""
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 
 from rules import score
 
 Labeler = Callable[[dict], tuple[str, str]]
+MAX_JUDGED = 200
 
 
 def rules_labeler(ghost: dict) -> tuple[str, str]:
@@ -22,18 +24,33 @@ def contexts(reading: list[dict], width: int = 100) -> dict[str, str]:
     return out
 
 
-def exorcise(scan_result: dict, labeler: Labeler = rules_labeler) -> dict:
+def _safe(labeler: Labeler, g: dict) -> tuple[str, str]:
+    try:
+        return labeler(g)
+    except Exception as e:  # judge offline or broken: fail closed, never open
+        return "suspicious", f"judge unavailable ({type(e).__name__})"
+
+
+def exorcise(scan_result: dict, labeler: Labeler = rules_labeler, max_judged: int = MAX_JUDGED) -> dict:
     ghosts = scan_result["ghosts"]
+    ctx = contexts(scan_result["reading"])
+    reasons = {}
     for g in ghosts:
-        g["rule_score"], reasons = score.score(g["text"])
-        try:
-            g["label"], g["reason"] = labeler(g)
-        except Exception as e:  # judge offline or broken: fail closed, never open
-            g["label"], g["reason"] = "suspicious", f"judge unavailable ({type(e).__name__})"
+        g["rule_score"], reasons[g["id"]] = score.score(g["text"])
+        g.setdefault("context", ctx.get(g["id"], ""))
+    # The judge sees the top ghosts by rule score, in parallel (PRD 9.5); the rest keep their rules label.
+    ranked = sorted(ghosts, key=lambda g: -g["rule_score"])
+    judged, rest = ranked[:max_judged], ranked[max_judged:]
+    with ThreadPoolExecutor(8) as pool:
+        for g, result in zip(judged, pool.map(lambda g: _safe(labeler, g), judged)):
+            g["label"], g["reason"] = result
+    for g in rest:
+        g["label"], g["reason"] = rules_labeler(g)
+    for g in ghosts:
         if g["label"] not in ("benign", "suspicious", "injection"):
             g["label"] = "suspicious"
         # A ghost that talks about its own classification is never let through as benign (PRD 7.4).
-        if g["label"] == "benign" and "talks to the classifier itself" in reasons:
+        if g["label"] == "benign" and "talks to the classifier itself" in reasons[g["id"]]:
             g["label"] = "suspicious"
 
     labels = {g["id"]: g for g in ghosts}

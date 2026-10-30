@@ -1,7 +1,9 @@
 """uvicorn api.main:app — POST /scan, the demo gallery, and the website (PRD 5, 8, 9.1)."""
 import asyncio
+import io
 import json
 import os
+import zipfile
 import threading
 import time
 import urllib.request
@@ -11,13 +13,16 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
+import envfile
 from exorcist import exorcise, rules_labeler
+from judge import client as judge_client
 from scanner.scan import MAX_HTML, ScanError, scan
 
+envfile.load()
 ROOT = Path(__file__).parent.parent
 DEMO = ROOT / "demo"
 RATE, WINDOW = 10, 60.0
@@ -32,7 +37,9 @@ class ScanRequest(BaseModel):
 
 
 def labeler():
-    # Part 3 swaps in the fine-tuned judge here; until then every scan is rules-only.
+    """The fine-tuned judge when JUDGE_URL is set; rules only otherwise (PRD 9.5)."""
+    if judge_client.configured():
+        return judge_client.label, "online"
     return rules_labeler, "offline"
 
 
@@ -78,6 +85,13 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Ghost Text", lifespan=lifespan, docs_url="/api/docs", redoc_url=None)
+
+
+@app.middleware("http")
+async def revalidate(request: Request, call_next):
+    response = await call_next(request)
+    response.headers.setdefault("Cache-Control", "no-cache")  # small site: always revalidate, so a deploy shows at once
+    return response
 
 
 def client_ip(request: Request) -> str:
@@ -134,11 +148,50 @@ def scan_endpoint(body: ScanRequest, request: Request):
     return result
 
 
+class Ghost(BaseModel):
+    text: str
+    technique: list[str] = []
+    context: str = ""
+
+
+class JudgeRequest(BaseModel):
+    ghosts: list[Ghost]
+
+
+@app.post("/judge")
+def judge_endpoint(body: JudgeRequest, request: Request):
+    """For the browser extension: label hidden sentences it found. Gets ghost text only, never a page; stores nothing."""
+    if not judge_client.configured():
+        raise HTTPException(503, "AI judge offline.")
+    if not 1 <= len(body.ghosts) <= 50 or any(len(g.text) > 4000 for g in body.ghosts):
+        raise HTTPException(400, "Send 1 to 50 ghosts, each under 4,000 characters.")
+    check_rate(client_ip(request))
+    ghosts = [{"id": f"g{i}", **g.model_dump()} for i, g in enumerate(body.ghosts)]
+    exorcise({"ghosts": ghosts, "reading": []}, judge_client.label)  # same floor and fail-closed path as /scan
+    return {"labels": [[g["label"], g["reason"]] for g in ghosts]}
+
+
 @app.get("/demo-results/{name}.json")
 def demo_result(name: str):
     if name not in demo_results:
         raise HTTPException(404, "No such demo page.")
     return JSONResponse(demo_results[name])
+
+
+@app.get("/ghost-text-shield.zip")
+def shield_zip(request: Request):
+    """The browser extension, zipped from extension/ on request, pointed at the server it was downloaded from."""
+    origin = str(request.base_url).rstrip("/")  # needs uvicorn --proxy-headers behind a TLS proxy to read https
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as z:
+        for f in sorted((ROOT / "extension").iterdir()):
+            if f.suffix == ".png":
+                z.write(f, f"ghost-text-shield/{f.name}")
+            elif f.suffix in (".js", ".json", ".html"):
+                text = f.read_text(encoding="utf-8").replace("http://localhost:8000", origin)
+                z.writestr(f"ghost-text-shield/{f.name}", text)
+    return Response(buf.getvalue(), media_type="application/zip",
+                    headers={"Content-Disposition": 'attachment; filename="ghost-text-shield.zip"'})
 
 
 @app.get("/health")

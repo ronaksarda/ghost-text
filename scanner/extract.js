@@ -1,6 +1,7 @@
 // Runs inside the page. Returns every piece of text an AI reader gets but a human can't see.
 // No judgement here: rules/ and judge/ decide what the ghosts mean.
-() => {
+// keep=true (the browser extension) also returns the page nodes behind each ghost, so they can be removed.
+(keep) => {
   const INVIS = /[​-‏‪-‮⁠-⁤⁦-⁩﻿]|[\u{E0000}-\u{E007F}]/u;
   const SKIP = new Set(['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'HEAD', 'TITLE']);
   const styles = new Map();
@@ -91,10 +92,12 @@
   }
 
   // Hidden pieces under the same hiding ancestor (or in the same block) are one ghost, so a split injection is judged whole.
-  const ghosts = [], grouped = new Map();
-  const add = (key, g) => {
+  const ghosts = [], grouped = new Map(), targets = [];
+  const add = (key, g, target) => {
     const prev = key && grouped.get(key);
     if (prev) {
+      const t = targets[ghosts.indexOf(prev)];
+      if (!t.some((x) => x.node === target.node && x.attr === target.attr)) t.push(target);
       prev.text += ' ' + g.text;
       for (const t of g.technique) if (!prev.technique.includes(t)) prev.technique.push(t);
       if (prev.box && g.box) {
@@ -104,6 +107,7 @@
       return ghosts.indexOf(prev);
     }
     ghosts.push(g);
+    targets.push([target]);
     if (key) grouped.set(key, g);
     return ghosts.length - 1;
   };
@@ -127,7 +131,7 @@
       if (!text) continue;
       const el = node.parentElement || root.host;
       if (node.nodeType === Node.COMMENT_NODE) {
-        add(null, { text, technique: ['H10'], views: ['raw_html'], selector: el ? selector(el) : '', box: null });
+        add(null, { text, technique: ['H10'], views: ['raw_html'], selector: el ? selector(el) : '', box: null }, { node });
         continue;
       }
       if (!el || el.closest('script,style,noscript,template,head')) continue;
@@ -136,39 +140,39 @@
       const ancestor = hiddenBy(el);
       if (ancestor) {
         const [t, by] = ancestor;
-        read(text, el, add(by, { text, technique: invisible ? [t, 'H9'] : [t], views: ['dom_text'], selector: selector(by), box: null }));
+        read(text, el, add(by, { text, technique: invisible ? [t, 'H9'] : [t], views: ['dom_text'], selector: selector(by), box: null }, { node: by }));
         continue;
       }
       const [found, b] = hiddenText(node, el);
       if (invisible) found.push('H9');
       // H9 ghosts stay per node: each keeps its own visible half.
-      read(text, el, found.length ? add(invisible ? null : blockOf(el), { text, technique: found, views: ['dom_text'], selector: selector(el), box: b }) : -1);
+      read(text, el, found.length ? add(invisible ? null : blockOf(el), { text, technique: found, views: ['dom_text'], selector: selector(el), box: b }, { node }) : -1);
     }
 
     for (const el of root.querySelectorAll('noscript')) {
       const text = el.textContent.trim();
-      if (text) add(null, { text, technique: ['H13'], views: ['dom_text', 'raw_html'], selector: selector(el), box: null });
+      if (text) add(null, { text, technique: ['H13'], views: ['dom_text', 'raw_html'], selector: selector(el), box: null }, { node: el });
     }
     for (const el of root.querySelectorAll('template')) {
       const text = el.content.textContent.trim();
-      if (text) add(null, { text, technique: ['H13'], views: ['raw_html'], selector: selector(el), box: null });
+      if (text) add(null, { text, technique: ['H13'], views: ['raw_html'], selector: selector(el), box: null }, { node: el });
     }
     for (const el of root.querySelectorAll('input[type=hidden]')) {
       const text = el.value.trim();
-      if (/\s/.test(text)) add(null, { text, technique: ['H13'], views: ['raw_html'], selector: selector(el), box: null });
+      if (/\s/.test(text)) add(null, { text, technique: ['H13'], views: ['raw_html'], selector: selector(el), box: null }, { node: el, attr: 'value' });
     }
     for (const el of root.querySelectorAll('[alt],[title],[aria-label],[aria-description]')) {
       if (el.closest('head')) continue;
       for (const a of ['alt', 'title', 'aria-label', 'aria-description']) {
         const text = (el.getAttribute(a) || '').trim();
-        if (text) add(null, { text, technique: ['H11'], attribute: a, views: ['raw_html'], selector: selector(el), box: null });
+        if (text) add(null, { text, technique: ['H11'], attribute: a, views: ['raw_html'], selector: selector(el), box: null }, { node: el, attr: a });
       }
     }
   }
   for (const el of document.querySelectorAll('meta[name=description],meta[property="og:description"],meta[name="twitter:description"]')) {
     const text = (el.content || '').trim();
-    if (text) add(null, { text, technique: ['H11'], attribute: 'content', views: ['raw_html'], selector: selector(el), box: null });
+    if (text) add(null, { text, technique: ['H11'], attribute: 'content', views: ['raw_html'], selector: selector(el), box: null }, { node: el, attr: 'content' });
   }
 
-  return { ghosts, reading, unscannable, stats: { elements: document.querySelectorAll('*').length, text_nodes: textNodes, shadow_roots: roots.length - 1 } };
+  return { ghosts, reading, unscannable, ...(keep ? { targets } : {}), stats: { elements: document.querySelectorAll('*').length, text_nodes: textNodes, shadow_roots: roots.length - 1 } };
 }

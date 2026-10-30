@@ -111,6 +111,16 @@ h1 {
 @keyframes surface { 0% { opacity: 0; } 40% { opacity: 0.15; } 50% { opacity: 0; } 70% { opacity: 0.6; } 75% { opacity: 0.2; } 100% { opacity: 1; } }
 .lede { color: var(--ash); max-width: 58ch; margin: var(--s3) auto var(--s4); }
 
+.get { max-width: 620px; margin: 0 auto var(--s5); display: grid; justify-items: center; gap: var(--s2); }
+.get .btn-go { font-size: 0.8rem; padding: 1.1rem 1.6rem; box-shadow: 0 0 0 1px var(--blood), 0 18px 50px -12px rgba(224, 20, 47, 0.6); }
+.get p { margin: 0; color: var(--bone); }
+.get > a:not(.btn) { color: var(--ash); font-size: 0.95rem; }
+.or { font-size: 0.75rem; color: var(--ash); margin-bottom: var(--s2); }
+.install { padding: var(--s5) 0 0; }
+.install > p { color: var(--ash); max-width: 64ch; margin: var(--s2) 0 0; }
+.install ol { margin: var(--s3) 0 0; padding-left: 1.4rem; display: grid; gap: var(--s1); max-width: 64ch; }
+.install li::marker { font-family: var(--pixel); font-size: 0.75rem; color: var(--blood); }
+.install code { color: var(--bone); background: var(--crypt); border: 1px solid var(--rot); border-radius: 3px; padding: 0.1rem 0.35rem; }
 .scan { max-width: 700px; margin: 0 auto; background: var(--crypt); border: 1px solid var(--rot); border-radius: 6px; padding: var(--s2); text-align: left; box-shadow: 0 30px 80px -30px rgba(224, 20, 47, 0.35); }
 .mode { display: flex; gap: var(--s3); margin: 0 0 var(--s1) 0.2rem; }
 .mode button { background: none; border: 0; color: var(--ash); font: 600 0.92rem var(--body); padding: 0.3rem 0; cursor: pointer; border-bottom: 2px solid transparent; }
