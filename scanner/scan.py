@@ -43,13 +43,18 @@ def _clean(ghost: dict) -> dict | None:
     return ghost
 
 
+def check_url(url: str) -> None:
+    if len(url) > 2000 or not url.startswith(("http://", "https://")) or not is_public_url(url):
+        raise ScanError("Only public http(s) URLs can be scanned.")
+
+
 def scan(url: str | None = None, html: str | None = None, *, screenshot: bool = False,
          timeout_ms: int = 20_000, cdp_url: str | None = None) -> dict:
     """Scan a URL or pasted HTML. cdp_url connects to a remote browser (Browserbase) instead of local Chromium."""
     if (url is None) == (html is None):
         raise ValueError("pass exactly one of url or html")
-    if url is not None and (len(url) > 2000 or not url.startswith(("http://", "https://")) or not is_public_url(url)):
-        raise ScanError("Only public http(s) URLs can be scanned.")
+    if url is not None:
+        check_url(url)
     if html is not None and len(html) > MAX_HTML:
         raise ScanError("Pasted HTML is larger than 2 MB.")
 

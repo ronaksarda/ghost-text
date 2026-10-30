@@ -11,7 +11,7 @@ import urllib.request
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from collections import defaultdict, deque
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager, nullcontext
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -25,7 +25,7 @@ from api import auth
 from eval import victim
 from exorcist import exorcise, rules_labeler
 from judge import client as judge_client
-from scanner.scan import MAX_HTML, ScanError, scan
+from scanner.scan import MAX_HTML, ScanError, check_url, scan
 
 envfile.load()
 ROOT = Path(__file__).parent.parent
@@ -51,35 +51,51 @@ def labeler():
     return rules_labeler, "offline"
 
 
-def browserbase_cdp_url() -> str | None:
-    """One Browserbase session per scan (PRD 10). None means use local Chromium."""
-    key = os.environ.get("BROWSERBASE_API_KEY")
-    if not key:
-        return None
-    body = {"timeout": 120}  # a scan takes seconds; never leave a paid session running
-    if os.environ.get("BROWSERBASE_PROJECT_ID"):
-        body["projectId"] = os.environ["BROWSERBASE_PROJECT_ID"]  # optional: Browserbase infers it from the key
-    req = urllib.request.Request("https://api.browserbase.com/v1/sessions", method="POST",
-                                 data=json.dumps(body).encode(),
-                                 headers={"X-BB-API-Key": key, "Content-Type": "application/json"})
+def _browserbase(path: str, body: dict) -> dict:
+    req = urllib.request.Request(f"https://api.browserbase.com/v1/sessions{path}", method="POST", data=json.dumps(body).encode(),
+                                 headers={"X-BB-API-Key": os.environ["BROWSERBASE_API_KEY"], "Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        return json.load(r)
+
+
+@contextmanager
+def browserbase_session():
+    """One Browserbase session per scan (PRD 10); yields its connect URL, or None to use local Chromium.
+
+    Closing the browser does not end a Browserbase session, and the free plan allows 3 at once,
+    so every session is released explicitly the moment its scan is done.
+    """
+    if not os.environ.get("BROWSERBASE_API_KEY"):
+        yield None
+        return
+    project = {"projectId": os.environ["BROWSERBASE_PROJECT_ID"]} if os.environ.get("BROWSERBASE_PROJECT_ID") else {}
     try:
-        with urllib.request.urlopen(req, timeout=10) as r:
-            return json.load(r)["connectUrl"]
+        session = _browserbase("", {"timeout": 120, **project})
     except Exception:
-        return None  # Browserbase down or out of credit: fall back to local Chromium (PRD 9.2)
+        yield None  # down, out of credit, or at the session limit: fall back to local Chromium (PRD 9.2)
+        return
+    try:
+        yield session["connectUrl"]
+    finally:
+        try:
+            _browserbase(f"/{session['id']}", {"status": "REQUEST_RELEASE", **project})
+        except Exception:
+            pass  # the 120 s timeout ends it anyway
 
 
 def run_scan(url: str | None = None, html: str | None = None, screenshot: bool = True) -> dict:
     label_fn, judge = labeler()
-    cdp = browserbase_cdp_url() if url else None
-    try:
-        result = scan(url=url, html=html, screenshot=screenshot, cdp_url=cdp)
-    except ScanError:
-        raise
-    except Exception:
-        if not cdp:
+    if url:
+        check_url(url)  # before opening a paid remote browser for an address we would refuse anyway
+    with browserbase_session() if url else nullcontext() as cdp:
+        try:
+            result = scan(url=url, html=html, screenshot=screenshot, cdp_url=cdp)
+        except ScanError:
             raise
-        result = scan(url=url, html=html, screenshot=screenshot)  # remote browser failed mid-scan: retry locally
+        except Exception:
+            if not cdp:
+                raise
+            result = scan(url=url, html=html, screenshot=screenshot)  # remote browser failed mid-scan: retry locally
     result = exorcise(result, label_fn)
     # What a naive agent reads (DOM text, ghosts included): the "before" side of the AI summary comparison.
     result["raw_text"] = "\n".join(p["text"] for p in result.pop("reading"))[:20_000]

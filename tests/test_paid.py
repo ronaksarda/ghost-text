@@ -115,3 +115,25 @@ def test_search_validates_query(client, monkeypatch):
     monkeypatch.setenv("SERPAPI_KEY", "test")
     assert client.post("/search", json={"q": "   "}).status_code == 400
     assert client.post("/search", json={"q": "x" * 201}).status_code == 400
+
+
+def test_browserbase_session_always_released(monkeypatch):
+    monkeypatch.setenv("BROWSERBASE_API_KEY", "bb_test")
+    calls = []
+
+    def fake(path, body):
+        calls.append((path, body.get("status")))
+        return {"id": "s1", "connectUrl": "wss://bb.example/s1"}
+    monkeypatch.setattr(main, "_browserbase", fake)
+    with pytest.raises(RuntimeError):
+        with main.browserbase_session() as cdp:
+            assert cdp == "wss://bb.example/s1"
+            raise RuntimeError("scan crashed")
+    assert calls == [("", None), ("/s1", "REQUEST_RELEASE")]  # released even when the scan fails
+
+
+def test_browserbase_limit_falls_back_to_local(monkeypatch):
+    monkeypatch.setenv("BROWSERBASE_API_KEY", "bb_test")
+    monkeypatch.setattr(main, "_browserbase", lambda path, body: (_ for _ in ()).throw(OSError("429")))
+    with main.browserbase_session() as cdp:
+        assert cdp is None
