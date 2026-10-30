@@ -72,10 +72,11 @@ Three or four built-in pages we host ourselves (clean blog, shop with hidden rev
 - Eval: base model vs fine-tuned on a held-out set, precision/recall/F1 per class
 - Web UI: URL input, HTML paste, demo gallery, screenshot overlay, ghost list
 - `POST /scan` API
+- Browser extension (Ghost Text Shield, Chromium MV3): removes hostile ghosts from every page the user opens before an in-browser AI assistant reads it. Added Oct 30 by the owner: normal users need protection without pasting links. Covers assistants that read the open tab; not assistants that fetch pages server-side.
 - Deployed on DigitalOcean; Browserbase as the production browser
 - Open repo with dataset, eval script, and model card
 
-**Out (named so nobody builds them):** browser extension, user accounts, scan history, OCR of text inside images, PDF scanning, crawling more than one page, auto-fixing sites, multi-language UI.
+**Out (named so nobody builds them):** Chrome Web Store listing (needs review time), user accounts, scan history, OCR of text inside images, PDF scanning, crawling more than one page, auto-fixing sites, multi-language UI.
 
 ## 7. How detection works
 

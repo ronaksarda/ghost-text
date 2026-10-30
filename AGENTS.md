@@ -10,12 +10,13 @@ Hard deadline: **Oct 31, 2026, 11:59 PM PDT**. Ship the smallest thing that meet
 api/       Python 3.12, FastAPI. POST /scan, /demo-results, /health; serves web/
 scanner/   Playwright + in-page JS (extract.js). Finds ghost candidates. No AI here.
 rules/     Pre-score, Unicode/base64 decoding. Pure functions.
-judge/     Client for the fine-tuned model. Returns a label, never a verdict. (Not built yet; rules/score.py stands in.)
+judge/     Prompt + client for the fine-tuned model. Returns a label, never a verdict. Rules stand in when JUDGE_URL is unset.
 exorcist.py  Labels ghosts, makes the verdict in code, rebuilds clean page text without hostile ghosts.
 eval/      Dataset (JSONL), splits, eval script. Numbers in the post come only from here.
 model/     Tinker fine-tune script + model card.
 demo/      Static haunted test pages. Must always give the right verdict.
 web/       Static HTML/CSS/JS served by FastAPI (no Node build). Run: uvicorn api.main:app
+extension/ Ghost Text Shield (Chrome MV3). gen.js is generated from scanner/extract.js + rules/score.py: run python -m extension.build after changing either.
 ```
 
 ## Commands

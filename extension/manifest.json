@@ -1,0 +1,38 @@
+{
+  "manifest_version": 3,
+  "name": "Ghost Text Shield",
+  "version": "0.1.0",
+  "description": "Removes hidden instructions from web pages before your AI assistant reads them.",
+  "icons": {
+    "16": "icon16.png",
+    "48": "icon48.png",
+    "128": "icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Ghost Text Shield"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:8000/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "http://*/*",
+        "https://*/*"
+      ],
+      "js": [
+        "gen.js",
+        "shield.js"
+      ],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ]
+}
