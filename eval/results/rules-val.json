@@ -53,7 +53,7 @@
     "injection->benign": 19,
     "suspicious->benign": 6
   },
-  "ms_per_ghost": 0.0,
+  "ms_per_ghost": 0.46,
   "predictions": [
     {
       "id": "d0392",

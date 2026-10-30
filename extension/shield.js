@@ -20,6 +20,7 @@
   // Mirrors rules/score.py score() and label().
   function score(text) {
     let miss = 1; const reasons = [];
+    text = text.replace(/<\/?[a-zA-Z][^>]*>/g, ' ');  // HTML tags, not "<|im_start|>" chat tokens
     const decoded = decodeBase64(text);
     if (decoded) { text += ' ' + decoded; miss *= 0.7; reasons.push('hides base64-encoded text'); }
     for (const [re, w, r] of RULES) if (re.test(text)) { miss *= 1 - w; reasons.push(r); }

@@ -14,7 +14,7 @@ A page can carry text in white on white, a one-pixel font, pushed off screen, or
 
 **Search check (signed in).** Agents search, then read the top results. Type a search: Ghost Text runs it through SerpApi and scans the top five results before your agent opens them.
 
-**See it fooled (signed in).** After a scan, Ultramarine summarises the page twice, as a normal agent reads it and after Ghost Text cleans it, side by side, with the real cost of the two calls.
+**See it fooled (signed in).** After a scan, an open model on our own server summarises the page twice, as a normal agent reads it and after Ghost Text cleans it, side by side.
 
 **The API (for developers building agents).** Send a page through Ghost Text before your model sees it, and use `clean_text`:
 
@@ -44,7 +44,7 @@ Held-out test split, 69 ghosts. Every number comes from [eval/results/](eval/res
 
 | Judge | Injection precision | Injection recall | Injection F1 | False alarms on real sites |
 |---|---|---|---|---|
-| Rules only | 88.9% | 30.8% | 45.7% | 0.0% (28 real-site ghosts) |
+| Rules only | 100.0% | 30.8% | 47.1% | 0.0% (28 real-site ghosts) |
 | Open model, no fine-tune | TBD | TBD | TBD | TBD |
 | Fine-tuned | TBD | TBD | TBD | TBD |
 
@@ -75,7 +75,7 @@ Deploy on one DigitalOcean droplet: paste [deploy/cloud-init.sh](deploy/cloud-in
 
 ## Built with
 
-Playwright, FastAPI, llama.cpp, Qwen3-8B (Apache-2.0), Browserbase, DigitalOcean, SerpApi, Ultramarine (Paper Instruments), Auth0. Built for the DEV Hacktoberfest 2026 Open-Source AI Challenge, Week 4: Ghost in the Machine. Commits made after Oct 31, 2026, 11:59 PM PDT will be listed here.
+Playwright, FastAPI, llama.cpp, Qwen3-8B (Apache-2.0), Browserbase, DigitalOcean, SerpApi, Auth0. Built for the DEV Hacktoberfest 2026 Open-Source AI Challenge, Week 4: Ghost in the Machine. Commits made after Oct 31, 2026, 11:59 PM PDT will be listed here.
 
 ## License
 
