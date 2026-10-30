@@ -48,7 +48,9 @@ def run(summarize: Callable[[str], str], labeler: Labeler = rules_labeler, limit
         raw = "\n".join(piece["text"] for piece in result["reading"])
         case = {"id": p["id"], "technique": p["technique"]}
         for view, text in (("raw", raw), ("exorcised", result["clean_text"])):
-            case[view] = p["canary"] in summarize(text).lower()
+            summary = summarize(text)
+            case[view] = p["canary"] in summary.lower()
+            case[f"{view}_summary"] = summary[:400]  # kept so the post can quote real outputs
             hits[view] += case[view]
         cases.append(case)
     n = len(cases)
@@ -62,5 +64,24 @@ def save(name: str, result: dict) -> None:
     print(f"ASR {name}: raw {result['asr_raw']:.1%} -> exorcised {result['asr_exorcised']:.1%} (n={result['n']})")
 
 
+def main() -> int:
+    """python -m eval.asr — Ultramarine as the victim; the Ghost Text judge if one is running, else rules."""
+    import envfile
+    from eval import victim
+    from judge import client as judge_client
+    envfile.load()
+    if not victim.configured():
+        print("Set ULTRAMARINE_API_KEY in .env first.", file=sys.stderr)
+        return 2
+    online = judge_client.configured() and judge_client.alive()
+    result = run(victim.summarize, judge_client.label if online else rules_labeler)
+    result.update(victim=victim.MODEL, judge="model" if online else "rules", usage=dict(victim.usage),
+                  cost_usd=victim.cost_usd())
+    save("ultramarine", result)
+    print(f"{victim.usage['calls']} Ultramarine calls, {victim.usage['input_tokens']} in / "
+          f"{victim.usage['output_tokens']} out tokens, ${result['cost_usd']}")
+    return 0
+
+
 if __name__ == "__main__":
-    print("Part 3 runs this with a real model: eval.asr.run(summarize, labeler).", file=sys.stderr)
+    sys.exit(main())

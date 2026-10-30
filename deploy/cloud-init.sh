@@ -1,9 +1,14 @@
 #!/bin/bash
 # Paste this whole file as "User data" when creating a DigitalOcean droplet (Ubuntu 24.04, 16 GB RAM).
-# Fill in the two Browserbase lines first (or leave them empty to use the droplet's own Chromium).
+# Fill in the keys first. Any left empty just switches that feature off (Browserbase falls back to local Chromium).
 # About 10 minutes after the droplet starts, the site is live at https://<droplet-ip-with-dashes>.sslip.io
 BROWSERBASE_API_KEY=""
 BROWSERBASE_PROJECT_ID=""
+SERPAPI_KEY=""
+ULTRAMARINE_API_KEY=""
+AUTH0_DOMAIN=""      # e.g. ghost-text.us.auth0.com
+AUTH0_CLIENT_ID=""   # the Single Page Application's Client ID
+AUTH0_AUDIENCE=""    # the API Identifier, e.g. https://ghost-text/api
 REPO="https://github.com/ronaksarda/ghost-text.git"
 MODEL_URL="https://huggingface.co/Qwen/Qwen3-8B-GGUF/resolve/main/Qwen3-8B-Q4_K_M.gguf"
 
@@ -20,6 +25,11 @@ umask 077
 cat > .env <<EOF
 BROWSERBASE_API_KEY=$BROWSERBASE_API_KEY
 BROWSERBASE_PROJECT_ID=$BROWSERBASE_PROJECT_ID
+SERPAPI_KEY=$SERPAPI_KEY
+ULTRAMARINE_API_KEY=$ULTRAMARINE_API_KEY
+AUTH0_DOMAIN=$AUTH0_DOMAIN
+AUTH0_CLIENT_ID=$AUTH0_CLIENT_ID
+AUTH0_AUDIENCE=$AUTH0_AUDIENCE
 EOF
 cat > deploy/.env <<EOF
 SITE=${IP//./-}.sslip.io
