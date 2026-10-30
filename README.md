@@ -107,12 +107,12 @@ A real ghost from the bait shop, trimmed:
 | Endpoint | What it does | Who can call it |
 |---|---|---|
 | `POST /scan` | `{"url"}` or `{"html"}`: verdict, ghosts, `clean_text`, screenshot | Anyone: 10 a minute, or 60 a minute with an Auth0 token |
-| `POST /search` | `{"q"}`: the top 5 results, each scanned | Signed in |
+| `POST /search` | `{"q"}`: the top 5 results, each scanned | Anyone, rate limited (signed in, if Auth0 is set up) |
 | `POST /judge` | `{"ghosts": [...]}`: a label for each hidden sentence (used by the extension) | Anyone, rate limited |
-| `POST /summarize` | Raw vs cleaned page, summarised by an open model, side by side | Signed in |
+| `POST /summarize` | Raw vs cleaned page, summarised by an open model, side by side | Anyone, rate limited (signed in, if Auth0 is set up) |
 | `GET /ghost-text-shield.zip` | The extension, pointed at the server you downloaded it from | Anyone |
 
-Agents calling at scale use an **Auth0** access token (client credentials) in `Authorization: Bearer ...`. Tokens are verified for signature, issuer, audience and expiry, and a bad token is an error, never a quiet downgrade to anonymous. The interactive reference is at `/api/docs`.
+Optionally, with Auth0 set up, agents calling at scale use an **Auth0** access token (client credentials) in `Authorization: Bearer ...`. Tokens are verified for signature, issuer, audience and expiry, and a bad token is an error, never a quiet downgrade to anonymous. The interactive reference is at `/api/docs`.
 
 Or skip the server entirely, so pages never leave your machine:
 
@@ -130,7 +130,7 @@ python -m scanner.cli https://example.com/product --clean
                                                               │
                           ┌───────────────────────────────────┴───────────────────────────────────┐
                           ▼                                                                       ▼
-                  rules pre-score                                               open-weight judge (Qwen3-8B)
+                  rules pre-score                                               open-weight judge (Qwen3)   
          cheap, explainable, catch the known phrases                untrusted text in delimiters, JSON label only
                           └───────────────────────────────────┬───────────────────────────────────┘
                                                               ▼
@@ -236,9 +236,9 @@ Everything optional is switched on by a line in `.env`, which git ignores. Leave
 | `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_AUDIENCE` | Sign-in, and token checks for agents |
 | `JUDGE_URL`, `JUDGE_MODEL`, `JUDGE_KEY` | The open-weight judge (any OpenAI-compatible `/completions` endpoint, such as llama.cpp) |
 
-### Deploy on one DigitalOcean droplet
+### Deploy on one server
 
-Create an Ubuntu 24.04 droplet with 16 GB of RAM. Paste [deploy/cloud-init.sh](deploy/cloud-init.sh) into **User data**, with your keys typed into that box, never into the file in the repo. About ten minutes after boot, it's serving at `https://<droplet-ip-with-dashes>.sslip.io`:
+Create an Ubuntu 24.04 server with 16 GB of RAM (a cloud VM such as a DigitalOcean droplet works). Paste [deploy/cloud-init.sh](deploy/cloud-init.sh) into **User data**, with your keys typed into that box, never into the file in the repo. About ten minutes after boot, it's serving at `https://<droplet-ip-with-dashes>.sslip.io`:
 
 - the app,
 - the judge (Qwen3-8B on llama.cpp, with **no public port**, so scanned text never leaves the machine),
@@ -276,6 +276,6 @@ Found a page that fools Ghost Text, or a harmless page it cries wolf on? That's 
 
 ## Credits
 
-Built for the [DEV Hacktoberfest 2026 Open-Source AI Challenge, Week 4: Ghost in the Machine](https://dev.to/challenges/hacktoberfest-week4-2026-10-26), with an AI coding agent (Claude Code) writing much of the code under direction. It stands on Playwright, FastAPI, llama.cpp, Qwen3-8B (Apache-2.0), Browserbase, SerpApi, Auth0 and DigitalOcean. Commits made after Oct 31, 2026, 11:59 PM PDT will be listed here.
+Built for the [DEV Hacktoberfest 2026 Open-Source AI Challenge, Week 4: Ghost in the Machine](https://dev.to/challenges/hacktoberfest-week4-2026-10-26), with an AI coding agent (Claude Code) writing much of the code under direction. It stands on Playwright, FastAPI, llama.cpp, Qwen3 (Apache-2.0), Browserbase and SerpApi. Commits made after Oct 31, 2026, 11:59 PM PDT will be listed here.
 
 MIT licensed. See [LICENSE](LICENSE).
