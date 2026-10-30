@@ -11,30 +11,11 @@ from pathlib import Path
 
 import envfile
 from exorcist import exorcise, rules_labeler
+from judge.client import label as judge_label
 
 HERE = Path(__file__).parent
 LABELS = ("benign", "suspicious", "injection")
-def tinker_labeler(base: bool):
-    """Base model (same prompt, no fine-tune) or the fine-tuned checkpoint, sampled through the Tinker SDK."""
-    import tinker
-    from tinker import types
-
-    from judge.prompt import parse, render
-    from model.train import BASE
-    service = tinker.ServiceClient()
-    path = (HERE.parent / "model" / "checkpoint.txt").read_text().strip() if not base else None
-    sampler = service.create_sampling_client(base_model=BASE) if base else service.create_sampling_client(model_path=path)
-    tok = sampler.get_tokenizer()
-    params = types.SamplingParams(max_tokens=12, temperature=0.0, stop=["<|im_end|>"])
-
-    def label(ghost: dict) -> tuple[str, str]:
-        prompt = tok.encode(render(ghost["text"], ghost["technique"], ghost.get("context", "")), add_special_tokens=False)
-        out = sampler.sample(prompt=types.ModelInput.from_ints(tokens=prompt), num_samples=1, sampling_params=params).result()
-        return parse(tok.decode(out.sequences[0].tokens))
-    return label
-
-
-LABELERS = {"rules": lambda: rules_labeler, "base": lambda: tinker_labeler(True), "ft": lambda: tinker_labeler(False)}
+LABELERS = {"rules": lambda: rules_labeler, "model": lambda: judge_label}  # model: the open-weight judge in .env
 
 
 def load(split: str) -> list[dict]:
