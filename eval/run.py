@@ -9,11 +9,32 @@ import time
 from collections import Counter, defaultdict
 from pathlib import Path
 
+import envfile
 from exorcist import exorcise, rules_labeler
 
 HERE = Path(__file__).parent
 LABELS = ("benign", "suspicious", "injection")
-LABELERS = {"rules": rules_labeler}
+def tinker_labeler(base: bool):
+    """Base model (same prompt, no fine-tune) or the fine-tuned checkpoint, sampled through the Tinker SDK."""
+    import tinker
+    from tinker import types
+
+    from judge.prompt import parse, render
+    from model.train import BASE
+    service = tinker.ServiceClient()
+    path = (HERE.parent / "model" / "checkpoint.txt").read_text().strip() if not base else None
+    sampler = service.create_sampling_client(base_model=BASE) if base else service.create_sampling_client(model_path=path)
+    tok = sampler.get_tokenizer()
+    params = types.SamplingParams(max_tokens=60, temperature=0.0, stop=["<|im_end|>"])
+
+    def label(ghost: dict) -> tuple[str, str]:
+        prompt = tok.encode(render(ghost["text"], ghost["technique"], ghost.get("context", "")), add_special_tokens=False)
+        out = sampler.sample(prompt=types.ModelInput.from_ints(tokens=prompt), num_samples=1, sampling_params=params).result()
+        return parse(tok.decode(out.sequences[0].tokens))
+    return label
+
+
+LABELERS = {"rules": lambda: rules_labeler, "base": lambda: tinker_labeler(True), "ft": lambda: tinker_labeler(False)}
 
 
 def load(split: str) -> list[dict]:
@@ -74,13 +95,14 @@ def table(name: str, split: str, m: dict) -> str:
 
 
 def main(argv: list[str]) -> int:
+    envfile.load()
     sys.stdout.reconfigure(encoding="utf-8")
     if not argv or argv[0] not in LABELERS:
         print(f"usage: python -m eval.run {{{'|'.join(LABELERS)}}} [--split val|test]")
         return 2
     split = argv[argv.index("--split") + 1] if "--split" in argv else "val"
     rows = load(split)
-    preds, ms = predict(rows, LABELERS[argv[0]])
+    preds, ms = predict(rows, LABELERS[argv[0]]())
     m = metrics(rows, preds, ms)
     (HERE / "results").mkdir(exist_ok=True)
     out = {"labeler": argv[0], "split": split, **m,
