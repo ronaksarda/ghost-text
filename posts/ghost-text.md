@@ -99,7 +99,7 @@ So the dataset is built around the friendly ghosts. I ran the scanner across pop
 
 ### Act III: The ghost that talked to the judge
 
-Each ghost is scored first by cheap, explainable rules. Then it is judged by a small open-weight model, Qwen3-8B, served by llama.cpp on my own **DigitalOcean** droplet. The judge has no public port. The hidden text of every page you scan stays on that machine.
+Each ghost is scored first by cheap, explainable rules. Then it is judged by a small open-weight Qwen3 model, served by llama.cpp on hardware you control, down to an ordinary laptop. No outside AI API is involved anywhere, so the hidden text of the pages you scan never leaves your machine.
 
 The ghosts I'm classifying are prompt injections. That's the point of them. So naturally, some of them speak to the classifier:
 
@@ -126,11 +126,13 @@ The extension performs the same exorcism on the live page, in your browser. Its 
 
 ### Act V: The rest of the cast
 
-**Search.** Agents rarely read just one page. They search, then they read the top results. The search tab runs your query through **SerpApi** and scans the top five results in parallel Browserbase sessions, before your agent opens any of them.
+**Search is where agents get haunted.** Agents rarely read one page. They search, then they read whatever comes back, which means an attacker doesn't need you to visit their page. They need to rank. The search tab runs your query through **SerpApi** and scans the top five results in parallel Browserbase sessions before your agent opens any of them.
+
+Two things I learned building it. First, SerpApi's Google results now hand back `/goto` redirect tokens instead of the pages' real addresses, and you can't scan a token. Its DuckDuckGo engine returns the real URLs, so that's what Ghost Text uses. Second, the first live search is where Ghost Text cried wolf (more on that below), which made the search tab the best test I have. It runs real pages through every rule, every time.
 
 ![Search check: the top five results for a real query, each opened in a cloud browser and scanned](https://raw.githubusercontent.com/ronaksarda/ghost-text/main/media/search.png)
 
-**Sign-in.** Search and AI summaries cost money on every call, and an API that scans pages is exactly the tool someone would point at a competitor's site. **Auth0** signs people in for those features. Agents that call the API at scale present an Auth0 access token, verified properly for signature, issuer, audience and expiry, and they get their own rate limit. Anyone can still scan a page without an account, just more slowly.
+**A cloud browser, on purpose.** Every page Ghost Text scans is hostile by assumption, so it shouldn't run its scripts on the machine that holds the model. Each scan opens a fresh **Browserbase** session, Playwright connects to it over CDP, and the session is released the moment the scan ends. It turned out to matter for coverage too. PCMag answered my local browser with a 403. The same page loaded in Browserbase and scanned clean.
 
 ## Results
 
@@ -180,9 +182,7 @@ Hamlet's tragedy isn't that he saw a ghost. It's that he couldn't check what it 
 
 ## Prize Categories
 
-- **Best Use of DigitalOcean:** the app and the open-weight judge (Qwen3-8B on llama.cpp) run together on one DigitalOcean droplet, with the judge unreachable from the internet, so scanned text never leaves it.
-- **Best Use of Browserbase:** every scanned page and every search result loads in a Browserbase session instead of on our server, and each session is released as soon as its scan ends.
-- **Best Use of SerpApi:** the search check runs a live web search and scans the top five results before an agent reads them.
-- **Best Use of Auth0 for AI Agents:** sign-in gates the features that cost money per call, and agents call the API with Auth0 access tokens verified for signature, issuer, audience and expiry, each with its own rate limit.
+- **Best Use of Browserbase:** every scanned page and every search result loads in a fresh Browserbase session instead of on our machine, because these pages are hostile by assumption. Sessions are released the moment a scan ends, and Browserbase reached pages a local browser was refused.
+- **Best Use of SerpApi:** the search check gives an agent live web search with a safety pass: the top five results are scanned for hidden instructions before the agent reads any of them.
 
 *Built with an AI coding agent (Claude Code), which wrote much of the code under my direction. I checked the work, ran every test, and stand behind it. Every number in this post comes from the eval files in the repo.*
