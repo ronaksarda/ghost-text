@@ -299,7 +299,7 @@ $('ask-go').addEventListener('click', async () => {
     $('ask-raw').textContent = d.raw;
     $('ask-clean').textContent = d.clean;
     $('ask-pair').hidden = false;
-    $('ask-cost').textContent = `Model: ${d.model}. ${d.tokens} tokens, no outside AI service.`;
+    $('ask-cost').textContent = `Both answers from the same open-weight model: ${d.model}.`;
   } catch {
     $('ask-cost').textContent = 'Could not reach Ghost Text. Try again.';
   } finally {

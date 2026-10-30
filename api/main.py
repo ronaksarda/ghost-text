@@ -230,15 +230,12 @@ def summarize_endpoint(body: SummarizeRequest, request: Request, who: dict = Dep
     if key not in cache:
         check_rate(f"user:{who['sub']}", RATE_SIGNED_IN)
         spend("summarize", 2)
-        before = dict(victim.usage)
         try:
             with ThreadPoolExecutor(2) as pool:
                 raw_sum, clean_sum = pool.map(victim.summarize, [raw, clean])
         except Exception:
             raise HTTPException(502, "The AI summary service did not answer. Try again in a minute.")
-        run = {k: victim.usage[k] - before[k] for k in before}  # approximate if two requests overlap
-        cache[key] = {"raw": raw_sum, "clean": clean_sum, "model": victim.model(),
-                      "tokens": run["input_tokens"] + run["output_tokens"]}
+        cache[key] = {"raw": raw_sum, "clean": clean_sum, "model": victim.model()}
         if len(cache) > 500:
             cache.pop(next(iter(cache)))
     return cache[key]

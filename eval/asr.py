@@ -65,6 +65,7 @@ def save(name: str, result: dict) -> None:
 
 
 def main() -> int:
+    import os
     """python -m eval.asr — our open model as the victim; the Ghost Text judge if one is running, else rules."""
     import envfile
     from eval import victim
@@ -75,10 +76,8 @@ def main() -> int:
         return 2
     online = judge_client.configured() and judge_client.alive()
     result = run(victim.summarize, judge_client.label if online else rules_labeler)
-    result.update(victim=victim.model(), judge="model" if online else "rules", usage=dict(victim.usage))
+    result.update(victim=victim.model(), judge=os.environ["JUDGE_MODEL"] if online else "rules")
     save("victim", result)
-    print(f"{victim.usage['calls']} victim calls, {victim.usage['input_tokens']} in / "
-          f"{victim.usage['output_tokens']} out tokens")
     return 0
 
 
