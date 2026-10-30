@@ -49,7 +49,11 @@ Hidden text is one of the oldest tricks on the web. White-on-white keyword stuff
 
 ![Ghost Text in 30 seconds: the shop, what the AI reads, the Haunted verdict](https://raw.githubusercontent.com/ronaksarda/ghost-text/main/media/demo.gif)
 
-The full 69-second walkthrough, with the search check and the extension, is [in the repo](https://github.com/ronaksarda/ghost-text/blob/main/media/ghost-text-demo.mp4). Every frame is the real product; the captions are the only thing added.
+The full walkthrough, with the search check and the extension:
+
+{% embed https://youtu.be/LwdTYuq3FjE %}
+
+Every frame is the real product; the captions are the only thing added.
 
 The verdict, with the evidence:
 

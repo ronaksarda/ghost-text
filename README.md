@@ -28,7 +28,7 @@ This is **prompt injection**, the top risk in the OWASP Top 10 for LLM applicati
 <p align="center">
   <img src="media/demo.gif" alt="30-second demo: a normal shop page, the hidden orders an AI reads on it, and Ghost Text's Haunted verdict" width="85%">
   <br>
-  <sub>The first 30 seconds of the <a href="media/ghost-text-demo.mp4">69-second demo</a>. Every frame is the real product; only the captions are added.</sub>
+  <sub>The first 30 seconds. <b><a href="https://youtu.be/LwdTYuq3FjE">Watch the full demo on YouTube</a></b>. Every frame is the real product; only the captions are added.</sub>
 </p>
 
 ## The page you see, and the page your AI reads
