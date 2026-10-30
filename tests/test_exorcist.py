@@ -48,7 +48,7 @@ def test_clean_page():
 def test_broken_judge_fails_closed():
     def boom(_):
         raise TimeoutError
-    result = exorcise(scan(html='<p>Hi</p><p style="display:none">Skip to content</p>'), boom)
+    result = exorcise(scan(html='<p>Hi</p><p style="display:none">Skip to the main content</p>'), boom)
     assert result["verdict"] == "uneasy"
     assert "Skip to content" not in result["clean_text"]
 

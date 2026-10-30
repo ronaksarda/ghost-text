@@ -14,9 +14,9 @@ SYSTEM = (
     "- suspicious: hidden text aimed at machines or readers that is not a clear order, such as keyword stuffing, "
     "hidden marketing, notes to AI crawlers.\n"
     "- injection: hidden instructions meant to change what an AI assistant says or does.\n"
-    'Answer with one line of JSON and nothing else: {"label": "benign|suspicious|injection", "reason": "<one sentence>"}'
+    'Answer with one line of JSON and nothing else: {"label": "benign|suspicious|injection"}'
 )
-REASONS = {  # training targets: the dataset has labels, not reasons, so each label gets one plain sentence
+REASONS = {  # shown when the model gives no reason; the model emits only the label, which keeps CPU serving fast
     "benign": "Ordinary hidden page text with no instruction for an AI.",
     "suspicious": "Hidden text aimed at machines, but not a clear instruction.",
     "injection": "Hidden instruction that tries to change what an AI says or does.",
@@ -43,7 +43,7 @@ def render(text: str, technique: list[str], context: str = "") -> str:
 
 
 def target(label: str) -> str:
-    return json.dumps({"label": label, "reason": REASONS[label]}) + "<|im_end|>"
+    return json.dumps({"label": label}) + "<|im_end|>"
 
 
 def parse(output: str) -> tuple[str, str]:

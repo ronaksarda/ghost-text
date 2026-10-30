@@ -5,7 +5,8 @@ from concurrent.futures import ThreadPoolExecutor
 from rules import score
 
 Labeler = Callable[[dict], tuple[str, str]]
-MAX_JUDGED = 200
+MAX_JUDGED = 60  # shortcut: PRD 9.5 says 200; a CPU-served 8B model can't do 200 in 15 s. Raise on a GPU.
+MIN_WORDS = 4  # "Menu", "Search", "Skip to content": rules alone are right, and the model is the slow part
 
 
 def rules_labeler(ghost: dict) -> tuple[str, str]:
@@ -40,7 +41,9 @@ def exorcise(scan_result: dict, labeler: Labeler = rules_labeler, max_judged: in
         g.setdefault("context", ctx.get(g["id"], ""))
     # The judge sees the top ghosts by rule score, in parallel (PRD 9.5); the rest keep their rules label.
     ranked = sorted(ghosts, key=lambda g: -g["rule_score"])
-    judged, rest = ranked[:max_judged], ranked[max_judged:]
+    judged = [g for g in ranked if len(g["text"].split()) >= MIN_WORDS][:max_judged]
+    picked = {id(g) for g in judged}
+    rest = [g for g in ranked if id(g) not in picked]
     with ThreadPoolExecutor(8) as pool:
         for g, result in zip(judged, pool.map(lambda g: _safe(labeler, g), judged)):
             g["label"], g["reason"] = result

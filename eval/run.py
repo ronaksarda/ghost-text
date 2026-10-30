@@ -25,7 +25,7 @@ def tinker_labeler(base: bool):
     path = (HERE.parent / "model" / "checkpoint.txt").read_text().strip() if not base else None
     sampler = service.create_sampling_client(base_model=BASE) if base else service.create_sampling_client(model_path=path)
     tok = sampler.get_tokenizer()
-    params = types.SamplingParams(max_tokens=60, temperature=0.0, stop=["<|im_end|>"])
+    params = types.SamplingParams(max_tokens=12, temperature=0.0, stop=["<|im_end|>"])
 
     def label(ghost: dict) -> tuple[str, str]:
         prompt = tok.encode(render(ghost["text"], ghost["technique"], ghost.get("context", "")), add_special_tokens=False)
