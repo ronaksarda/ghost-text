@@ -51,7 +51,7 @@ Hidden text is one of the oldest tricks on the web. White-on-white keyword stuff
 
 The full walkthrough, with the search check and the extension:
 
-{% embed https://youtu.be/LwdTYuq3FjE %}
+{% embed https://youtu.be/HSeiU1gsd0k %}
 
 Every frame is the real product; the captions are the only thing added.
 
