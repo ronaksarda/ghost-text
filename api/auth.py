@@ -1,6 +1,6 @@
 """Auth0: who is calling. People sign in on the site; agents use an Auth0 access token (client credentials).
 
-Why: search checks (SerpApi) and AI summaries (Ultramarine) cost money per call, and an agent hammering the API
+Why: search checks (SerpApi) and AI summaries run a model on every call, and an agent hammering the API
 could mass-scan someone's site. Signed-in callers get those features and a higher rate limit; anonymous callers
 can still scan, slowly. Set AUTH0_DOMAIN, AUTH0_AUDIENCE and AUTH0_CLIENT_ID (the site's SPA app) to turn it on.
 """

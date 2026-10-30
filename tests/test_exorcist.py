@@ -59,6 +59,13 @@ def test_classifier_attack_never_benign():
     assert result["ghosts"][0]["label"] == "suspicious"
 
 
-@pytest.mark.parametrize("text", ["Skip to main content", "Opens in a new tab", "Menu", "Loading…"])
+@pytest.mark.parametrize("text", [
+    "Skip to main content", "Opens in a new tab", "Menu", "Loading…",
+    # Found crying wolf on real sites (businessinsider.com, techgearlab.com, Oct 30):
+    "Email address", "Click to copy link", "Click to share on LinkedIn", "Post comment",
+    "If you like bass you can tune down the low-end response via the app EQ, and the case adds a wireless charging option.",
+    '<div class="social"><ul><li><a href="https://www.facebook.com/x/" aria-label="Facebook" target="_blank">'
+    'Follow us</a></li><li><a href="https://twitter.com/x" aria-label="Twitter">Tweet</a></li></ul></div>',
+])
 def test_rules_leave_common_hidden_text_alone(text):
     assert label(text)[0] == "benign"

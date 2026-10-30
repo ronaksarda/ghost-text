@@ -206,7 +206,7 @@ class SummarizeRequest(BaseModel):
 
 @app.post("/summarize")
 def summarize_endpoint(body: SummarizeRequest, request: Request, who: dict = Depends(auth.require)):
-    """Ultramarine summarises the page twice: as a naive agent reads it, and after Ghost Text cleans it."""
+    """An AI assistant summarises the page twice: as a naive agent reads it, and after Ghost Text cleans it."""
     if not victim.configured():
         raise HTTPException(503, "AI summaries are offline.")
     raw, clean = body.raw[:victim.MAX_CHARS], body.clean[:victim.MAX_CHARS]
@@ -221,7 +221,8 @@ def summarize_endpoint(body: SummarizeRequest, request: Request, who: dict = Dep
         except Exception:
             raise HTTPException(502, "The AI summary service did not answer. Try again in a minute.")
         run = {k: victim.usage[k] - before[k] for k in before}  # approximate if two requests overlap
-        cache[key] = {"raw": raw_sum, "clean": clean_sum, "model": victim.MODEL, "cost_usd": victim.cost_usd(run)}
+        cache[key] = {"raw": raw_sum, "clean": clean_sum, "model": victim.model(),
+                      "tokens": run["input_tokens"] + run["output_tokens"]}
         if len(cache) > 500:
             cache.pop(next(iter(cache)))
     return cache[key]
@@ -232,7 +233,8 @@ class SearchRequest(BaseModel):
 
 
 def serp(q: str) -> list[dict]:
-    params = urllib.parse.urlencode({"engine": "google", "q": q, "num": 10, "api_key": os.environ["SERPAPI_KEY"]})
+    # DuckDuckGo, not Google: SerpApi's Google results now carry only /goto redirect tokens, not the pages' URLs.
+    params = urllib.parse.urlencode({"engine": "duckduckgo", "q": q, "api_key": os.environ["SERPAPI_KEY"]})
     with urllib.request.urlopen(f"https://serpapi.com/search.json?{params}", timeout=20) as r:
         return [x for x in json.load(r).get("organic_results", []) if x.get("link", "").startswith(("http://", "https://"))]
 
