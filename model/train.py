@@ -31,7 +31,7 @@ def datum(tok, row: dict) -> tuple[types.Datum, int, int]:
 
 
 def sample_labels(sampler, tok, rows: list[dict]) -> tuple[list[str], int, int]:
-    params = types.SamplingParams(max_tokens=60, temperature=0.0, stop=["<|im_end|>"])
+    params = types.SamplingParams(max_tokens=12, temperature=0.0, stop=["<|im_end|>"])
     prompts = [tok.encode(render(r["text"], r["technique"], r["context"]), add_special_tokens=False) for r in rows]
     futures = [sampler.sample(prompt=types.ModelInput.from_ints(tokens=p), num_samples=1, sampling_params=params)
                for p in prompts]  # all in flight at once

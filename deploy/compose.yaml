@@ -1,0 +1,30 @@
+# One DigitalOcean droplet: the app, the open-weight judge (llama.cpp), and Caddy for HTTPS.
+# The judge has no public port: only the app can reach it, so hidden page text never leaves this machine.
+services:
+  judge:
+    image: ghcr.io/ggml-org/llama.cpp:server
+    command: ["-m", "/models/judge.gguf", "--host", "0.0.0.0", "--port", "8080", "-c", "8192", "-np", "4", "--api-key", "${JUDGE_KEY}"]
+    volumes: ["./models:/models:ro"]
+    restart: unless-stopped
+
+  app:
+    build: ..
+    env_file: [../.env]
+    environment:
+      JUDGE_URL: http://judge:8080/v1
+      JUDGE_MODEL: judge
+      JUDGE_KEY: ${JUDGE_KEY}
+      PORT: "8080"
+    depends_on: [judge]
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2
+    command: ["caddy", "reverse-proxy", "--from", "${SITE}", "--to", "app:8080"]
+    ports: ["80:80", "443:443"]
+    volumes: ["caddy:/data"]
+    depends_on: [app]
+    restart: unless-stopped
+
+volumes:
+  caddy:

@@ -23,7 +23,7 @@ extension/ Ghost Text Shield (Chrome MV3). gen.js is generated from scanner/extr
 
 ```bash
 python -m venv .venv && .venv/Scripts/activate      # Windows Git Bash
-pip install -r requirements.txt && python -m playwright install chromium
+pip install -r requirements-dev.txt && python -m playwright install chromium
 python -m pytest -q                                   # all Python tests
 python -m scanner.cli demo/haunted-shop.html          # scan a local file or URL, print JSON
 python -m scanner.cli demo/haunted-shop.html --clean  # verdict + exorcised text an agent should read

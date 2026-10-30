@@ -38,7 +38,7 @@ class ScanRequest(BaseModel):
 
 def labeler():
     """The fine-tuned judge when JUDGE_URL is set; rules only otherwise (PRD 9.5)."""
-    if judge_client.configured():
+    if judge_client.configured() and judge_client.alive():
         return judge_client.label, "online"
     return rules_labeler, "offline"
 
@@ -161,7 +161,7 @@ class JudgeRequest(BaseModel):
 @app.post("/judge")
 def judge_endpoint(body: JudgeRequest, request: Request):
     """For the browser extension: label hidden sentences it found. Gets ghost text only, never a page; stores nothing."""
-    if not judge_client.configured():
+    if not (judge_client.configured() and judge_client.alive()):
         raise HTTPException(503, "AI judge offline.")
     if not 1 <= len(body.ghosts) <= 50 or any(len(g.text) > 4000 for g in body.ghosts):
         raise HTTPException(400, "Send 1 to 50 ghosts, each under 4,000 characters.")
@@ -175,6 +175,12 @@ def judge_endpoint(body: JudgeRequest, request: Request):
 def demo_result(name: str):
     if name not in demo_results:
         raise HTTPException(404, "No such demo page.")
+    if demo_results[name]["judge"] == "offline" and labeler()[1] == "online":
+        # The judge was still loading at startup: redo the demo once it is up, keep the old result if that fails.
+        try:
+            demo_results[name] = {**run_scan(html=(DEMO / f"{name}.html").read_text(encoding="utf-8")), "url": f"/demo/{name}.html"}
+        except Exception:
+            pass
     return JSONResponse(demo_results[name])
 
 

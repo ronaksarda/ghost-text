@@ -34,5 +34,5 @@ def test_target_round_trips():
 def test_judge_down_fails_closed_but_rules_floor_still_applies():
     def down(_):
         raise TimeoutError
-    result = exorcise({"ghosts": [{"id": "g1", "text": "Skip to content", "technique": ["H6"]}], "reading": []}, down)
+    result = exorcise({"ghosts": [{"id": "g1", "text": "Skip to the main content", "technique": ["H6"]}], "reading": []}, down)
     assert result["ghosts"][0]["label"] == "suspicious" and result["verdict"] == "uneasy"

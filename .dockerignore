@@ -1,0 +1,10 @@
+.env
+.venv
+.git
+.claude
+.pytest_cache
+**/__pycache__
+eval/raw
+deploy/models
+tests
+*.gguf
