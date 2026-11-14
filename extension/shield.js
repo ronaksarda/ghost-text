@@ -30,7 +30,7 @@
   function label(text) {
     const [s, reasons] = score(text);
     let l = s >= GHOST_LIMITS.injection ? 'injection' : s >= GHOST_LIMITS.suspicious ? 'suspicious' : 'benign';
-    if (l === 'benign' && reasons.includes(CLASSIFIER)) l = 'suspicious';  // PRD 7.4 floor
+    if (l === 'benign' && reasons.includes(CLASSIFIER)) l = 'suspicious';  // classifier-talk floor
     return [l, l === 'benign' ? 'no instruction aimed at an AI' : reasons.join('; ')];
   }
 
@@ -88,7 +88,9 @@
       const item = { text, technique: g.technique, targets: result.targets[i] };
       const [l, reason] = label(text);
       if (l !== 'benign') block(item, l, reason, 'rules');
-      else if (settings.judge && text.split(/\s+/).length >= 6) askJudge.push(item);  // short labels never leave the browser
+      // Short labels never leave the browser. Same rule as exorcist.py NO_SPACES: scripts written without spaces
+      // (Chinese, Japanese, Thai...) put a whole sentence in one "word", so they always go to the judge.
+      else if (settings.judge && (text.split(/\s+/).length >= 6 || /[฀-໿က-႟ក-៿぀-ヿ㐀-䶿一-鿿豈-﫿]/.test(text))) askJudge.push(item);
     });
     if (askJudge.length) {
       const batch = askJudge.slice(0, 50);

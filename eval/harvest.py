@@ -1,6 +1,6 @@
 """python -m eval.harvest — scan every site in eval/sites.txt and save its ghost candidates to eval/raw/<host>.jsonl.
 
-Real-site ghosts are the benign half of the dataset (PRD 11). Never accepts consent banners, logs in, or
+Real-site ghosts are the benign half of the dataset. Never accepts consent banners, logs in, or
 works around bot checks: a site that blocks us is skipped and logged.
 """
 import json

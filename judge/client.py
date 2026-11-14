@@ -21,7 +21,7 @@ def configured() -> bool:
 
 
 def alive() -> bool:
-    """One tiny request, cached 30 s. A judge that is down or still loading means rules-only mode (PRD 9.5)."""
+    """One tiny request, cached 30 s. A judge that is down or still loading means rules-only mode."""
     if time.monotonic() - _probe["at"] > 30:
         try:
             chat([{"role": "user", "content": "Reply with ok."}], max_tokens=64, timeout=8)
@@ -41,14 +41,14 @@ def chat(messages: list[dict], max_tokens: int = 400, timeout: float = TIMEOUT, 
                                  data=json.dumps(body).encode(),
                                  headers={"Content-Type": "application/json", "User-Agent": "ghost-text/1.0",
                                           "Authorization": f"Bearer {os.environ.get(f'{prefix}_KEY', '')}"})
-    for attempt in range(3):
+    for attempt in range(5):  # exorcise() caps the total wait, so retrying a 429 a few times is safe
         try:
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 out = json.load(r)
             break
         except urllib.error.HTTPError as e:
             # Free tiers rate-limit: wait as told, but never longer than the caller's budget allows.
-            if e.code != 429 or attempt == 2:
+            if e.code != 429 or attempt == 4:
                 raise
             time.sleep(min(float(e.headers.get("retry-after") or 2), 5))
     text = out["choices"][0]["message"].get("content") or ""

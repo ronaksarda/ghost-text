@@ -1,12 +1,18 @@
 """Label every ghost, decide the verdict in code, and rebuild the page text without the hostile ones."""
+import os
+import re
 from collections.abc import Callable
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, wait
 
 from rules import score
 
 Labeler = Callable[[dict], tuple[str, str]]
-MAX_JUDGED = 60  # shortcut: PRD 9.5 says 200; a CPU-served 8B model can't do 200 in 15 s. Raise on a GPU.
+SCHEMA = "1"  # output shape every surface returns; bump only on a breaking change
+MAX_JUDGED = 60  # shortcut: the goal was 200; a CPU-served 8B model can't do 200 in 15 s. Raise on a GPU.
 MIN_WORDS = 4  # "Menu", "Search", "Skip to content": rules alone are right, and the model is the slow part
+# Thai, Lao, Myanmar, Khmer, Japanese kana, Chinese: written without spaces, so a whole sentence is one "word".
+NO_SPACES = re.compile("[฀-໿က-႟ក-៿぀-ヿ㐀-䶿一-鿿豈-﫿]")
+BUDGET = 10.0  # seconds for all judge calls on one page: ~5 s of browser + this stays under the 15 s p95 goal
 
 
 def rules_labeler(ghost: dict) -> tuple[str, str]:
@@ -14,7 +20,7 @@ def rules_labeler(ghost: dict) -> tuple[str, str]:
 
 
 def contexts(reading: list[dict], width: int = 100) -> dict[str, str]:
-    """Visible text just before and after each ghost, for the judge (PRD 7.3). Attribute and comment ghosts get none."""
+    """Visible text just before and after each ghost, for the judge. Attribute and comment ghosts get none."""
     out, before = {}, ""
     for i, piece in enumerate(reading):
         if not piece["ghost"]:
@@ -39,20 +45,24 @@ def exorcise(scan_result: dict, labeler: Labeler = rules_labeler, max_judged: in
     for g in ghosts:
         g["rule_score"], reasons[g["id"]] = score.score(g["text"])
         g.setdefault("context", ctx.get(g["id"], ""))
-    # The judge sees the top ghosts by rule score, in parallel (PRD 9.5); the rest keep their rules label.
+    # The judge sees the top ghosts by rule score, in parallel; the rest keep their rules label.
     ranked = sorted(ghosts, key=lambda g: -g["rule_score"])
-    judged = [g for g in ranked if len(g["text"].split()) >= MIN_WORDS][:max_judged]
+    judged = [g for g in ranked if len(g["text"].split()) >= MIN_WORDS or NO_SPACES.search(g["text"])][:max_judged]
     picked = {id(g) for g in judged}
     rest = [g for g in ranked if id(g) not in picked]
-    with ThreadPoolExecutor(8) as pool:
-        for g, result in zip(judged, pool.map(lambda g: _safe(labeler, g), judged)):
-            g["label"], g["reason"] = result
+    # JUDGE_PARALLEL: hosted free tiers (Groq) answer 429 when called 8 at a time; a local llama.cpp takes -np of them.
+    pool = ThreadPoolExecutor(int(os.environ.get("JUDGE_PARALLEL") or 8))
+    futures = [pool.submit(_safe, labeler, g) for g in judged]
+    done, _ = wait(futures, timeout=BUDGET)
+    pool.shutdown(wait=False, cancel_futures=True)
+    for g, f in zip(judged, futures):
+        g["label"], g["reason"] = f.result() if f in done else ("suspicious", "judge ran out of time")  # fail closed
     for g in rest:
         g["label"], g["reason"] = rules_labeler(g)
     for g in ghosts:
         if g["label"] not in ("benign", "suspicious", "injection"):
             g["label"] = "suspicious"
-        # A ghost that talks about its own classification is never let through as benign (PRD 7.4).
+        # A ghost that talks about its own classification is never let through as benign.
         if g["label"] == "benign" and "talks to the classifier itself" in reasons[g["id"]]:
             g["label"] = "suspicious"
 
@@ -74,6 +84,7 @@ def exorcise(scan_result: dict, labeler: Labeler = rules_labeler, max_judged: in
             parts.append((piece["sep"] if parts else "") + piece["text"].strip())
 
     return {
+        "schema": SCHEMA,
         **scan_result,
         "verdict": verdict,
         "clean_text": "".join(parts),

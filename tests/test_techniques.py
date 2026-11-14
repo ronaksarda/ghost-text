@@ -1,4 +1,4 @@
-"""One case per hiding technique (PRD 7.1) not already covered by the haunted-shop demo in test_scanner.py."""
+"""One case per hiding technique not already covered by the haunted-shop demo in test_scanner.py."""
 import base64
 
 import pytest

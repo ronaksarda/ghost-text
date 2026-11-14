@@ -1,4 +1,4 @@
-"""The demo gallery (PRD 5.3) must always give the right verdict. Every later change has to keep this green."""
+"""The demo gallery must always give the right verdict. Every later change has to keep this green."""
 from pathlib import Path
 
 import pytest

@@ -1,4 +1,4 @@
-"""Rule pre-score (PRD 7.3 step 1). Cheap and explainable; the fine-tuned judge refines it."""
+"""Rule pre-score. Cheap and explainable; the fine-tuned judge refines it."""
 import base64
 import binascii
 import re
@@ -31,7 +31,7 @@ BASE64 = re.compile(r"[A-Za-z0-9+/]{40,}={0,2}")
 
 
 def decode_base64(text: str) -> str:
-    """Readable text hidden in base64 runs over 40 chars (PRD 9.4). Binary blobs (images, hashes) decode to nothing."""
+    """Readable text hidden in base64 runs over 40 chars. Binary blobs (images, hashes) decode to nothing."""
     out = []
     for run in BASE64.findall(text):
         try:

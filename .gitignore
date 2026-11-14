@@ -6,3 +6,10 @@ node_modules/
 .next/
 eval/raw/
 *.gguf
+data/
+
+.vercel
+research/
+AGENTS.md
+CLAUDE.md
+.claude/

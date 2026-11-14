@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ghost Text privacy</title>
+<meta name="description" content="What Ghost Text sends, what it keeps, and for how long.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Public+Sans:wght@400;600;700&family=Special+Elite&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/">Ghost Text</a>
+</header>
+<main>
+  <section class="install">
+    <h1>Privacy</h1>
+    <p>Short version: we keep no pages, no screenshots, no URLs and no hidden text. We keep a count of scans per day, with no content in it.</p>
+  </section>
+
+  <section class="install">
+    <h2>Scanning a page on this site</h2>
+    <p>You send a URL or pasted HTML. A browser opens the page, either on this server or in a Browserbase cloud browser if this instance uses one. The hidden text found on the page goes to the AI judge, an open-weight model. It runs on this server or at a hosted model provider such as Groq, depending on how this instance is set up. You get the result back, and the server then forgets the page, the screenshot and the text.</p>
+  </section>
+
+  <section class="install">
+    <h2>Ghost Text Shield (the Chrome extension)</h2>
+    <p>The shield checks pages inside your browser. When its rules can't decide on a hidden sentence (six words or more, or text in a script without spaces such as Chinese), it sends that sentence to the judge. It never sends the page or its URL. You can switch the judge off in the shield's popup, and then nothing leaves your browser.</p>
+  </section>
+
+  <section class="install">
+    <h2>Search check and AI summaries</h2>
+    <p>A search check sends your query to SerpApi and scans the top results. The result list is reused for an hour, so the same search doesn't cost twice, and stays in this server's memory (never on disk) until it restarts. An AI summary sends the page text to the summary model, and the two summaries stay in memory until the server restarts or newer ones push them out. Both features need you to sign in, which Auth0 handles. We only see the account ID Auth0 gives us.</p>
+  </section>
+
+  <section class="install">
+    <h2>What we keep</h2>
+    <p>For each request we write one line: the day, which feature was used, the verdict, how long it took, and how many judge calls failed. We never write the URL, the page, the hidden text, your IP address or your account. You can see the totals at <a href="/stats">/stats</a>.</p>
+    <p>To enforce rate limits, the server holds your IP address in memory. It is never written to disk and is gone when the server restarts.</p>
+  </section>
+
+  <section class="install">
+    <h2>Training</h2>
+    <p>We do not train models on what you scan.</p>
+  </section>
+
+  <section class="install">
+    <h2>Run it yourself</h2>
+    <p>Ghost Text is open source. If a page must never leave your machine, run the scanner locally: <code>python -m scanner.cli &lt;url&gt; --clean</code>.</p>
+  </section>
+</main>
+<footer class="foot">
+  <p><a href="/">Back to Ghost Text</a></p>
+</footer>
+</body>
+</html>

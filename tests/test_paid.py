@@ -96,6 +96,7 @@ def test_search_scans_top_results(client, monkeypatch):
     monkeypatch.setattr(main, "serp", lambda q: [{"title": f"Result {i}", "link": f"https://site{i}.example/"} for i in range(8)])
 
     def fake_scan(url=None, html=None, screenshot=True):
+        assert main.busy._value < 2  # every result's browser holds a `busy` slot
         if "site1" in url:
             raise main.ScanError("The page answered with HTTP 403.")
         bad = "site0" in url

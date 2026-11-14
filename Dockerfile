@@ -5,7 +5,8 @@ COPY requirements.txt .
 # The browser version must match the pinned playwright package, so install it here rather than use a prebuilt image.
 RUN pip install --no-cache-dir -r requirements.txt && python -m playwright install --with-deps chromium
 COPY . .
-RUN useradd --create-home ghost && chown -R ghost /app
+# data/ holds the content-free /stats log; compose mounts a volume there so counts survive a rebuild.
+RUN useradd --create-home ghost && mkdir -p /app/data && chown -R ghost /app
 USER ghost
 EXPOSE 8080
 # --proxy-headers: behind Caddy the app must see https, so the extension download points at the https origin.

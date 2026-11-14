@@ -1,4 +1,4 @@
-"""SSRF guard (PRD 9.1): the browser may only talk to public internet hosts."""
+"""SSRF guard: the browser may only talk to public internet hosts."""
 import ipaddress
 import socket
 from urllib.parse import urlsplit
@@ -12,7 +12,7 @@ def is_public_url(url: str) -> bool:
         return False
     try:
         infos = socket.getaddrinfo(parts.hostname, parts.port or 443, proto=socket.IPPROTO_TCP)
-    except (socket.gaierror, UnicodeError):
+    except (socket.gaierror, UnicodeError, ValueError):  # ValueError: port out of range
         return False
     # Every address must be public, so a host with one private record can't slip through.
     return all(ipaddress.ip_address(info[4][0].split("%")[0]).is_global for info in infos)

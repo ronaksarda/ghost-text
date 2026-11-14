@@ -1,4 +1,4 @@
-"""Invisible Unicode (PRD H9): decode tag smuggling, ignore legitimate uses."""
+"""Invisible Unicode: decode tag smuggling, ignore legitimate uses."""
 import re
 import unicodedata
 

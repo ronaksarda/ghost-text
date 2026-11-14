@@ -1,7 +1,8 @@
-"""uvicorn api.main:app — POST /scan, /search, /summarize, /judge, the demo gallery, and the website (PRD 5, 8, 9.1)."""
+"""uvicorn api.main:app — POST /scan, /search, /summarize, /judge, the demo gallery, and the website."""
 import asyncio
 import io
 import json
+import math
 import os
 import hashlib
 import threading
@@ -23,7 +24,7 @@ from pydantic import BaseModel
 import envfile
 from api import auth
 from eval import victim
-from exorcist import exorcise, rules_labeler
+from exorcist import SCHEMA, exorcise, rules_labeler
 from judge import client as judge_client
 from scanner.scan import MAX_HTML, ScanError, check_url, scan
 
@@ -31,12 +32,28 @@ envfile.load()
 ROOT = Path(__file__).parent.parent
 DEMO = ROOT / "demo"
 RATE, RATE_SIGNED_IN, WINDOW = 10, 60, 60.0
-DAILY = {"summarize": 300, "search": 100}  # caps spend on paid APIs even if an account is abused
+DAILY = {"summarize": 300, "search": 100, "judge": 5000}  # caps spend on paid APIs even if an account is abused
 spent: dict[str, list] = {}
 cache: dict[str, dict] = {}
 busy = threading.BoundedSemaphore(2)  # one Chromium per scan; more than two at once starves a small droplet
 hits: dict[str, deque] = defaultdict(deque)
 demo_results: dict[str, dict] = {}
+STATS = Path(os.environ.get("STATS_PATH") or ROOT / "data" / "stats.jsonl")
+stats_lock = threading.Lock()
+
+
+def record(kind: str, verdict: str | None, started: float, ghosts: list[dict] = ()) -> None:
+    """One content-free line per request for /stats: never a URL, host, IP or page text."""
+    line = {"day": time.strftime("%Y-%m-%d", time.gmtime()), "kind": kind, "verdict": verdict,
+            "ms": round((time.monotonic() - started) * 1000),
+            "judge_errors": sum(g.get("reason", "").startswith(("judge unavailable", "judge ran out")) for g in ghosts)}
+    try:
+        with stats_lock:
+            STATS.parent.mkdir(parents=True, exist_ok=True)
+            with STATS.open("a", encoding="utf-8") as f:
+                f.write(json.dumps(line) + "\n")
+    except OSError:
+        pass  # counting must never break a scan
 
 
 class ScanRequest(BaseModel):
@@ -45,7 +62,7 @@ class ScanRequest(BaseModel):
 
 
 def labeler():
-    """The fine-tuned judge when JUDGE_URL is set; rules only otherwise (PRD 9.5)."""
+    """The fine-tuned judge when JUDGE_URL is set; rules only otherwise."""
     if judge_client.configured() and judge_client.alive():
         return judge_client.label, "online"
     return rules_labeler, "offline"
@@ -60,7 +77,7 @@ def _browserbase(path: str, body: dict) -> dict:
 
 @contextmanager
 def browserbase_session():
-    """One Browserbase session per scan (PRD 10); yields its connect URL, or None to use local Chromium.
+    """One Browserbase session per scan; yields its connect URL, or None to use local Chromium.
 
     Closing the browser does not end a Browserbase session, and the free plan allows 3 at once,
     so every session is released explicitly the moment its scan is done.
@@ -72,7 +89,7 @@ def browserbase_session():
     try:
         session = _browserbase("", {"timeout": 120, **project})
     except Exception:
-        yield None  # down, out of credit, or at the session limit: fall back to local Chromium (PRD 9.2)
+        yield None  # down, out of credit, or at the session limit: fall back to local Chromium
         return
     try:
         yield session["connectUrl"]
@@ -128,7 +145,12 @@ def client_ip(request: Request) -> str:
 
 
 def check_rate(who: str, limit: int = RATE) -> None:
-    now, q = time.monotonic(), hits[who]
+    now = time.monotonic()
+    if len(hits) > 10_000:  # forget visitors idle for a whole window, so the table can't grow forever
+        for k, v in list(hits.items()):
+            if not v or now - v[-1] > WINDOW:
+                hits.pop(k, None)
+    q = hits[who]
     while q and now - q[0] > WINDOW:
         q.popleft()
     if len(q) >= limit:
@@ -175,14 +197,18 @@ def scan_endpoint(body: ScanRequest, request: Request):
     limit(request)
     if not busy.acquire(timeout=30):
         raise HTTPException(503, "Ghost Text is busy. Try again in a minute.")
+    started = time.monotonic()
     try:
         result = run_scan(url=body.url, html=body.html)
     except ScanError as e:
+        record("scan", "error", started)
         raise HTTPException(400 if "public" in str(e) or "2 MB" in str(e) else 422, str(e))
     except Exception:
+        record("scan", "error", started)
         raise HTTPException(502, "The browser could not load that page. If it needs a login or blocks bots, use Paste HTML.")
     finally:
         busy.release()
+    record("scan", result["verdict"], started, result["ghosts"])
     if body.url:
         host = urlsplit(body.url).hostname or ""
         try:
@@ -210,8 +236,11 @@ def judge_endpoint(body: JudgeRequest, request: Request):
     if not 1 <= len(body.ghosts) <= 50 or any(len(g.text) > 4000 for g in body.ghosts):
         raise HTTPException(400, "Send 1 to 50 ghosts, each under 4,000 characters.")
     limit(request)
+    spend("judge", len(body.ghosts))  # unauthenticated: one script must not use up the judge for everyone
     ghosts = [{"id": f"g{i}", **g.model_dump()} for i, g in enumerate(body.ghosts)]
+    started = time.monotonic()
     exorcise({"ghosts": ghosts, "reading": []}, judge_client.label)  # same floor and fail-closed path as /scan
+    record("judge", None, started, ghosts)
     return {"labels": [[g["label"], g["reason"]] for g in ghosts]}
 
 
@@ -254,12 +283,20 @@ def serp(q: str) -> list[dict]:
 
 def check_result(item: dict) -> dict:
     row = {"title": item.get("title", ""), "link": item["link"], "snippet": item.get("snippet", "")}
+    if not busy.acquire(timeout=30):  # each result is its own Chromium, so each takes a slot
+        return {**row, "verdict": "unscanned", "error": "Ghost Text is busy."}
+    started = time.monotonic()
     try:
         result = run_scan(url=item["link"], screenshot=False)
     except ScanError as e:
+        record("search", "error", started)
         return {**row, "verdict": "unscanned", "error": str(e)}
     except Exception:
+        record("search", "error", started)
         return {**row, "verdict": "unscanned", "error": "The page did not load."}
+    finally:
+        busy.release()
+    record("search", result["verdict"], started, result["ghosts"])
     hostile = sorted((g for g in result["ghosts"] if g["label"] != "benign"), key=lambda g: g["label"] != "injection")
     return {**row, "verdict": result["verdict"], "hostile": len(hostile), "first": hostile[0]["text"][:200] if hostile else None}
 
@@ -282,13 +319,8 @@ def search_endpoint(body: SearchRequest, request: Request, who: dict = Depends(a
         items = serp(q)[:5]
     except Exception:
         raise HTTPException(502, "The search service did not answer. Try again in a minute.")
-    if not busy.acquire(timeout=30):
-        raise HTTPException(503, "Ghost Text is busy. Try again in a minute.")
-    try:
-        with ThreadPoolExecutor(3) as pool:  # results load in parallel; each scan keeps its own 20 s limit
-            rows = list(pool.map(check_result, items))
-    finally:
-        busy.release()
+    with ThreadPoolExecutor(3) as pool:  # results load in parallel, at most `busy` browsers at once
+        rows = list(pool.map(check_result, items))
     out = {"q": q, "results": rows}
     cache[key] = {"at": time.time(), "body": out}
     return out
@@ -301,16 +333,48 @@ def config():
             "search": bool(os.environ.get("SERPAPI_KEY")), "judge": labeler()[1]}
 
 
+@app.get("/stats")
+def stats():
+    """Per-day usage with no content: requests by kind, verdicts, judge errors, p95 scan time.
+
+    shortcut: reads the whole log on each call; fine for a few hundred thousand lines, then roll up per day.
+    """
+    days: dict[str, dict] = {}
+    try:
+        lines = STATS.read_text(encoding="utf-8").splitlines()
+    except FileNotFoundError:
+        lines = []
+    for raw in lines:
+        try:
+            r = json.loads(raw)
+        except ValueError:
+            continue  # a line cut short by a crash
+        d = days.setdefault(r["day"], {"requests": {}, "verdicts": {}, "judge_errors": 0, "scan_ms": []})
+        d["requests"][r["kind"]] = d["requests"].get(r["kind"], 0) + 1
+        if r["verdict"]:
+            d["verdicts"][r["verdict"]] = d["verdicts"].get(r["verdict"], 0) + 1
+        d["judge_errors"] += r["judge_errors"]
+        if r["kind"] == "scan":
+            d["scan_ms"].append(r["ms"])
+    for d in days.values():
+        ms = sorted(d.pop("scan_ms"))
+        d["p95_scan_ms"] = ms[math.ceil(0.95 * len(ms)) - 1] if ms else None  # nearest-rank p95
+    return {"schema": SCHEMA, "days": dict(sorted(days.items(), reverse=True))}
+
+
 @app.get("/demo-results/{name}.json")
 def demo_result(name: str):
     if name not in demo_results:
         raise HTTPException(404, "No such demo page.")
-    if demo_results[name]["judge"] == "offline" and labeler()[1] == "online":
+    if demo_results[name]["judge"] == "offline" and labeler()[1] == "online" and busy.acquire(blocking=False):
         # The judge was still loading at startup: redo the demo once it is up, keep the old result if that fails.
+        # Non-blocking: a crowd opening the gallery gets the old result, not one Chromium each.
         try:
             demo_results[name] = {**run_scan(html=(DEMO / f"{name}.html").read_text(encoding="utf-8")), "url": f"/demo/{name}.html"}
         except Exception:
             pass
+        finally:
+            busy.release()
     return JSONResponse(demo_results[name])
 
 

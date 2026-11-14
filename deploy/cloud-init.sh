@@ -38,4 +38,22 @@ mkdir -p deploy/models
 curl -fL --retry 5 -o deploy/models/judge.gguf "$MODEL_URL"
 cd deploy
 docker compose up -d --build
+
+# The scanner's browser runs untrusted pages. DNS rebinding can slip past the URL check, and the metadata service
+# hands out this very script (with the keys above), so containers may never reach it. A unit, not
+# iptables-persistent: saving Docker's own rules too makes them clash with Docker after a reboot.
+cat > /etc/systemd/system/block-metadata.service <<'UNIT'
+[Unit]
+Description=Keep containers away from the cloud metadata service
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/sbin/iptables -I DOCKER-USER -d 169.254.169.254 -j DROP
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+systemctl enable --now block-metadata.service
 echo "Ghost Text is starting at https://${IP//./-}.sslip.io"

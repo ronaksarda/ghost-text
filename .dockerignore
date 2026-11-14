@@ -8,3 +8,4 @@ eval/raw
 deploy/models
 tests
 *.gguf
+data

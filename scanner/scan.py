@@ -1,4 +1,4 @@
-"""Load a page in a real browser and return its ghost candidates (PRD 5.1 steps 3-5)."""
+"""Load a page in a real browser and return its ghost candidates."""
 import base64
 import time
 from datetime import datetime, timezone
@@ -91,7 +91,7 @@ def scan(url: str | None = None, html: str | None = None, *, screenshot: bool = 
             stats = {"elements": 0, "text_nodes": 0, "shadow_roots": 0}
             origin = _origin(page.main_frame.url)
             for frame in page.frames:
-                # PRD H16: same-origin frames are scanned, cross-origin ones (ads, embeds) are reported, not read.
+                # H16: same-origin frames are scanned, cross-origin ones (ads, embeds) are reported, not read.
                 if frame is not page.main_frame and not frame.url.startswith("about:") and _origin(frame.url) != origin:
                     unscannable.append({"kind": "cross_origin_iframe", "src": frame.url})
                     continue
