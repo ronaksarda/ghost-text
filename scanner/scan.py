@@ -63,8 +63,12 @@ def scan(url: str | None = None, html: str | None = None, *, screenshot: bool = 
     with sync_playwright() as p:
         browser = p.chromium.connect_over_cdp(cdp_url) if cdp_url else p.chromium.launch()
         try:
-            page = browser.new_page(viewport={"width": 1280, "height": 800})
-            page.route("**/*", route_guard)
+            # Service workers, popups and WebSockets all slip past page.route, so: no workers, guard the whole
+            # context (popups are new pages in it), and hold every WebSocket: a handler that never calls
+            # connect_to_server keeps it off the network. (ws.close() here deadlocks the sync API.)
+            page = browser.new_page(viewport={"width": 1280, "height": 800}, service_workers="block")
+            page.context.route("**/*", route_guard)
+            page.context.route_web_socket("**/*", lambda ws: None)
             try:
                 if url:
                     response = page.goto(url, wait_until="load", timeout=timeout_ms)

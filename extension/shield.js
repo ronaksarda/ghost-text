@@ -61,6 +61,7 @@
   }
 
   const blocked = [];
+  const asked = new Set();  // sentences the judge already answered: a busy page rescans up to 30 times
   let judgeState = 'unused', settings = { enabled: true, judge: true };
 
   function report() {
@@ -92,11 +93,13 @@
       // (Chinese, Japanese, Thai...) put a whole sentence in one "word", so they always go to the judge.
       else if (settings.judge && (text.split(/\s+/).length >= 6 || /[฀-໿က-႟ក-៿぀-ヿ㐀-䶿一-鿿豈-﫿]/.test(text))) askJudge.push(item);
     });
-    if (askJudge.length) {
-      const batch = askJudge.slice(0, 50);
+    const fresh = askJudge.filter((x) => !asked.has(x.text));
+    if (fresh.length) {
+      const batch = fresh.slice(0, 50);
       const res = await chrome.runtime.sendMessage({ type: 'judge', ghosts: batch.map((x) => ({ text: x.text, technique: x.technique, context: '' })) }).catch(() => null);
       if (res && res.labels) {
         judgeState = 'online';
+        batch.forEach((x) => asked.add(x.text));  // only answered ones: an offline judge gets another try next scan
         res.labels.forEach(([l, reason], i) => { if (l !== 'benign') block(batch[i], l, reason, 'judge'); });
       } else judgeState = 'offline';  // rules already ran; the page is never left unscanned
     }

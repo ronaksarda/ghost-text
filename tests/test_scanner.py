@@ -65,6 +65,32 @@ def test_ssrf_blocked(url):
         scan(url=url)
 
 
+def test_popups_and_websockets_cannot_reach_private_hosts():
+    import http.server
+    import threading
+    hits = []
+
+    class Probe(http.server.BaseHTTPRequestHandler):
+        def do_GET(self):
+            hits.append(self.path)
+            self.send_response(200)
+            self.end_headers()
+
+        def log_message(self, *a):
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Probe)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    port = server.server_address[1]
+    try:
+        # page.route alone misses both: a popup is a new page, and WebSockets are never routed.
+        scan(html=f"<p>x</p><script>window.open('http://127.0.0.1:{port}/popup');"
+                  f"new WebSocket('ws://127.0.0.1:{port}/ws');</script>")
+    finally:
+        server.shutdown()
+    assert hits == []
+
+
 def test_pasted_html_cannot_reach_private_hosts():
     # The guard applies to subresources too, so this image request is aborted instead of hitting localhost.
     result = scan(html='<img src="http://127.0.0.1:9/x.png" alt="probe">')

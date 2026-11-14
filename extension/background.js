@@ -2,17 +2,20 @@
 // (only here, so page CORS rules don't apply and pages never see the API).
 importScripts('gen.js');
 
+// Reports are read-modify-write on one key; frames report at the same moment, so they take turns or one is lost.
+let queue = Promise.resolve();
+
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
   if (msg.type === 'report' && sender.tab) {
     const key = `tab${sender.tab.id}`;
-    chrome.storage.session.get({ [key]: { frames: {} } }).then((store) => {
+    queue = queue.then(() => chrome.storage.session.get({ [key]: { frames: {} } })).then((store) => {
       const tab = store[key];
       tab.frames[sender.frameId] = { blocked: msg.blocked, judge: msg.judge };
       const n = Object.values(tab.frames).reduce((s, f) => s + f.blocked.length, 0);
       chrome.action.setBadgeText({ tabId: sender.tab.id, text: n ? String(n) : '' });
       chrome.action.setBadgeBackgroundColor({ tabId: sender.tab.id, color: '#e0142f' });
-      chrome.storage.session.set({ [key]: tab });
-    });
+      return chrome.storage.session.set({ [key]: tab });
+    }).catch(() => {});  // one failed write must not stall every later report
     return false;
   }
   if (msg.type === 'judge') {
